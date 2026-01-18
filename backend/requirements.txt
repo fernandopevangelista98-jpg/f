@@ -1,0 +1,44 @@
+# ========================================
+# DEPENDÊNCIAS DO BACKEND - PODCAST AEC
+# ========================================
+
+# Framework Web
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+gunicorn>=21.2.0
+
+# Banco de Dados
+sqlalchemy>=2.0.25
+psycopg[binary]>=3.1.0
+alembic>=1.13.0
+
+# Validação e Schemas
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Autenticação JWT
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.0
+
+# Upload de Arquivos
+python-multipart>=0.0.6
+aiofiles>=23.2.0
+
+# Storage S3/R2
+boto3>=1.34.0
+
+# Processamento de Imagens
+pillow>=10.0.0
+
+# Geração de PDF (Certificados)
+reportlab>=4.0.0
+
+# Variáveis de Ambiente
+python-dotenv>=1.0.0
+
+# Envio de Emails
+resend>=0.7.0
+
+# Utilitários
+httpx>=0.26.0
