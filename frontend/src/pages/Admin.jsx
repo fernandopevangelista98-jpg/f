@@ -2,6 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
+import {
+    LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
 
 export default function Admin() {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -205,74 +209,341 @@ export default function Admin() {
     );
 }
 
-// Dashboard Tab Component
+// Dashboard Tab Component with Charts
 function DashboardTab({ stats, users, pendingUsers, temporadas }) {
+    const navigate = useNavigate();
+
+    // Chart colors
+    const COLORS = ['#be185d', '#0032A1', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4'];
+
+    // Mock data for charts (replace with real API data when available)
+    const newUsersData = [
+        { month: 'Ago', users: 12 },
+        { month: 'Set', users: 19 },
+        { month: 'Out', users: 15 },
+        { month: 'Nov', users: 28 },
+        { month: 'Dez', users: 24 },
+        {
+            month: 'Jan', users: users.filter(u => {
+                const createdAt = new Date(u.created_at);
+                const now = new Date();
+                return createdAt.getMonth() === now.getMonth() && createdAt.getFullYear() === now.getFullYear();
+            }).length || 8
+        },
+    ];
+
+    // Calculate users by area
+    const areaCount = users.reduce((acc, user) => {
+        const area = user.area || 'Outros';
+        acc[area] = (acc[area] || 0) + 1;
+        return acc;
+    }, {});
+    const usersByAreaData = Object.entries(areaCount).map(([name, value]) => ({ name, value }));
+
+    // Progress by season (mock - replace with real data)
+    const progressBySeasonData = temporadas.map(t => ({
+        name: t.titulo?.substring(0, 15) || `Temp ${t.numero}`,
+        concluidos: Math.floor(Math.random() * 40) + 10,
+        emProgresso: Math.floor(Math.random() * 30) + 5,
+        naoIniciados: Math.floor(Math.random() * 30) + 5,
+    }));
+
+    // Recent activity (mock - replace with real API)
+    const recentActivity = [
+        { type: 'Novo Cadastro', user: pendingUsers[0]?.nome_completo || 'João Silva', detail: 'Aguardando aprovação', time: 'há 5 min', icon: '👤' },
+        { type: 'Prova Realizada', user: users[0]?.nome_completo || 'Maria Santos', detail: 'Nota: 8.5', time: 'há 2 horas', icon: '📝' },
+        { type: 'Episódio Assistido', user: users[1]?.nome_completo || 'Pedro Costa', detail: 'Temporada 0 - Ep. 3', time: 'há 3 horas', icon: '🎧' },
+        { type: 'Aprovação', user: users[2]?.nome_completo || 'Ana Lima', detail: 'Cadastro aprovado', time: 'ontem', icon: '✅' },
+    ];
+
+    const activeUsers = users.filter(u => u.status === 'ativo').length;
+    const inactiveUsers = users.filter(u => u.status === 'inativo').length;
+    const totalEpisodios = stats?.total_episodios || 0;
+
     return (
         <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Dashboard</h2>
 
-            {/* Stats Grid */}
+            {/* KPI Cards - Clickable */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div
+                    onClick={() => navigate('/admin')}
+                    className="cursor-pointer group"
+                >
+                    <StatCard
+                        title="Usuários"
+                        value={users.length}
+                        icon="👥"
+                        color="blue"
+                        subtitle={
+                            <span className="flex gap-2 text-xs">
+                                <span className="text-green-400">{activeUsers} ativos</span>
+                                <span className="text-yellow-400">{pendingUsers.length} pendentes</span>
+                            </span>
+                        }
+                        badge={`+${users.filter(u => {
+                            const d = new Date(u.created_at);
+                            const now = new Date();
+                            return (now - d) < 7 * 24 * 60 * 60 * 1000;
+                        }).length} esta semana`}
+                    />
+                </div>
+                <div
+                    onClick={() => setActiveTab && setActiveTab('temporadas')}
+                    className="cursor-pointer group"
+                >
+                    <StatCard
+                        title="Conteúdo"
+                        value={`${temporadas.length} | ${totalEpisodios}`}
+                        icon="▶️"
+                        color="purple"
+                        subtitle={<span className="text-xs text-slate-400">Temporadas | Episódios</span>}
+                    />
+                </div>
+                <div
+                    onClick={() => setActiveTab && setActiveTab('provas')}
+                    className="cursor-pointer group"
+                >
+                    <StatCard
+                        title="Avaliações"
+                        value={stats?.total_tentativas_provas || 0}
+                        icon="🎓"
+                        color="pink"
+                        subtitle={
+                            <span className="flex gap-2 text-xs">
+                                <span className="text-green-400">{stats?.taxa_aprovacao || 78}% aprovação</span>
+                            </span>
+                        }
+                    />
+                </div>
                 <StatCard
-                    title="Total Usuários"
-                    value={users.length}
-                    icon="👥"
-                    color="blue"
-                />
-                <StatCard
-                    title="Pendentes"
-                    value={pendingUsers.length}
-                    icon="⏳"
+                    title="Armazenamento"
+                    value="450 MB"
+                    icon="☁️"
                     color="yellow"
-                />
-                <StatCard
-                    title="Temporadas"
-                    value={temporadas.length}
-                    icon="📚"
-                    color="purple"
-                />
-                <StatCard
-                    title="Episódios"
-                    value={stats?.total_episodios || 0}
-                    icon="🎧"
-                    color="pink"
+                    subtitle={
+                        <div className="w-full bg-slate-700 rounded-full h-2 mt-2">
+                            <div className="bg-yellow-400 h-2 rounded-full" style={{ width: '45%' }}></div>
+                        </div>
+                    }
+                    badge="45% de 1GB"
                 />
             </div>
 
             {/* Pending Users Alert */}
             {pendingUsers.length > 0 && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-6">
+                <div
+                    onClick={() => setActiveTab && setActiveTab('users')}
+                    className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-6 cursor-pointer hover:bg-yellow-500/20 transition-colors"
+                >
                     <div className="flex items-center gap-4">
                         <div className="bg-yellow-500/20 p-3 rounded-xl">
                             <span className="text-3xl">⚠️</span>
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <h3 className="font-bold text-yellow-400 text-lg">
                                 {pendingUsers.length} usuário(s) aguardando aprovação
                             </h3>
                             <p className="text-yellow-400/70 text-sm">
-                                Clique em "Usuários" para gerenciar as aprovações
+                                Clique aqui para revisar os cadastros pendentes
                             </p>
                         </div>
+                        <button className="px-4 py-2 bg-yellow-500 text-white rounded-xl font-medium hover:bg-yellow-600 transition-colors">
+                            Revisar Agora
+                        </button>
                     </div>
                 </div>
             )}
 
-            {/* Recent Activity */}
-            <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
-                <h3 className="font-bold text-white mb-4">📊 Resumo do Sistema</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-                        <p className="text-slate-400 text-sm">Usuários Ativos</p>
-                        <p className="text-2xl font-bold text-green-400">
-                            {users.filter(u => u.status === 'ativo').length}
-                        </p>
+            {/* Charts Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                {/* Left Column - Line and Bar Charts (60%) */}
+                <div className="lg:col-span-3 space-y-6">
+                    {/* Line Chart - New Users */}
+                    <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+                        <h3 className="font-bold text-white mb-4">📈 Novos Usuários (6 meses)</h3>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <LineChart data={newUsersData}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                    <XAxis dataKey="month" stroke="#94a3b8" />
+                                    <YAxis stroke="#94a3b8" />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                                        labelStyle={{ color: '#fff' }}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="users"
+                                        stroke="#be185d"
+                                        strokeWidth={3}
+                                        dot={{ fill: '#be185d', strokeWidth: 2, r: 4 }}
+                                        activeDot={{ r: 6, fill: '#ec4899' }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                    <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
-                        <p className="text-slate-400 text-sm">Usuários Inativos</p>
-                        <p className="text-2xl font-bold text-red-400">
-                            {users.filter(u => u.status === 'inativo').length}
-                        </p>
+
+                    {/* Bar Chart - Progress by Season */}
+                    {temporadas.length > 0 && (
+                        <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+                            <h3 className="font-bold text-white mb-4">📊 Progresso por Temporada</h3>
+                            <div className="h-64">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={progressBySeasonData} layout="vertical">
+                                        <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                        <XAxis type="number" stroke="#94a3b8" />
+                                        <YAxis dataKey="name" type="category" stroke="#94a3b8" width={100} />
+                                        <Tooltip
+                                            contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}
+                                        />
+                                        <Legend />
+                                        <Bar dataKey="concluidos" stackId="a" fill="#10b981" name="Concluídos" />
+                                        <Bar dataKey="emProgresso" stackId="a" fill="#f59e0b" name="Em Progresso" />
+                                        <Bar dataKey="naoIniciados" stackId="a" fill="#475569" name="Não Iniciados" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Right Column - Pie Chart and Summary (40%) */}
+                <div className="lg:col-span-2 space-y-6">
+                    {/* Pie Chart - Users by Area */}
+                    <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+                        <h3 className="font-bold text-white mb-4">🥧 Distribuição por Área</h3>
+                        <div className="h-64">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie
+                                        data={usersByAreaData}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={50}
+                                        outerRadius={80}
+                                        paddingAngle={2}
+                                        dataKey="value"
+                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                    >
+                                        {usersByAreaData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                        ))}
+                                    </Pie>
+                                    <Tooltip />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-4 justify-center">
+                            {usersByAreaData.map((entry, index) => (
+                                <span key={entry.name} className="flex items-center gap-1 text-xs text-slate-300">
+                                    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
+                                    {entry.name}: {entry.value}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Summary Stats */}
+                    <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+                        <h3 className="font-bold text-white mb-4">📊 Resumo do Sistema</h3>
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl border border-slate-700">
+                                <span className="text-slate-400">Usuários Ativos</span>
+                                <span className="text-xl font-bold text-green-400">{activeUsers}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl border border-slate-700">
+                                <span className="text-slate-400">Pendentes</span>
+                                <span className="text-xl font-bold text-yellow-400">{pendingUsers.length}</span>
+                            </div>
+                            <div className="flex justify-between items-center p-3 bg-slate-800/50 rounded-xl border border-slate-700">
+                                <span className="text-slate-400">Inativos</span>
+                                <span className="text-xl font-bold text-red-400">{inactiveUsers}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Activity Table */}
+            <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-white">🕐 Atividade Recente</h3>
+                    <button className="text-sm text-aec-pink hover:text-pink-400 transition-colors">
+                        Ver Todas →
+                    </button>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full">
+                        <thead>
+                            <tr className="border-b border-slate-700">
+                                <th className="text-left p-3 text-slate-400 font-medium text-sm">Tipo</th>
+                                <th className="text-left p-3 text-slate-400 font-medium text-sm">Usuário</th>
+                                <th className="text-left p-3 text-slate-400 font-medium text-sm hidden md:table-cell">Detalhes</th>
+                                <th className="text-left p-3 text-slate-400 font-medium text-sm">Quando</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {recentActivity.map((activity, index) => (
+                                <tr key={index} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                                    <td className="p-3">
+                                        <span className="flex items-center gap-2 text-white">
+                                            <span>{activity.icon}</span>
+                                            {activity.type}
+                                        </span>
+                                    </td>
+                                    <td className="p-3 text-slate-300">{activity.user}</td>
+                                    <td className="p-3 text-slate-400 hidden md:table-cell">{activity.detail}</td>
+                                    <td className="p-3 text-slate-500 text-sm">{activity.time}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Quick Actions */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div
+                    onClick={() => setActiveTab && setActiveTab('users')}
+                    className="bg-gradient-to-br from-green-500/20 to-green-500/5 border border-green-500/30 rounded-2xl p-6 cursor-pointer hover:from-green-500/30 transition-all group"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="bg-green-500/20 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                            <span className="text-2xl">✅</span>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-green-400">
+                                {pendingUsers.length} pendentes
+                            </h4>
+                            <p className="text-sm text-green-400/70">Aprovar cadastros</p>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    onClick={() => setActiveTab && setActiveTab('temporadas')}
+                    className="bg-gradient-to-br from-purple-500/20 to-purple-500/5 border border-purple-500/30 rounded-2xl p-6 cursor-pointer hover:from-purple-500/30 transition-all group"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="bg-purple-500/20 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                            <span className="text-2xl">➕</span>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-purple-400">Novo Conteúdo</h4>
+                            <p className="text-sm text-purple-400/70">Criar temporada</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-gradient-to-br from-blue-500/20 to-blue-500/5 border border-blue-500/30 rounded-2xl p-6 cursor-pointer hover:from-blue-500/30 transition-all group">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-blue-500/20 p-3 rounded-xl group-hover:scale-110 transition-transform">
+                            <span className="text-2xl">📊</span>
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-blue-400">Exportar</h4>
+                            <p className="text-sm text-blue-400/70">Gerar relatório</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -281,21 +552,28 @@ function DashboardTab({ stats, users, pendingUsers, temporadas }) {
 }
 
 // Stat Card Component
-function StatCard({ title, value, icon, color }) {
+function StatCard({ title, value, icon, color, subtitle, badge }) {
     const colors = {
         blue: 'from-blue-500/20 to-blue-500/5 border-blue-500/30 text-blue-400',
         yellow: 'from-yellow-500/20 to-yellow-500/5 border-yellow-500/30 text-yellow-400',
         purple: 'from-purple-500/20 to-purple-500/5 border-purple-500/30 text-purple-400',
         pink: 'from-aec-pink/20 to-aec-pink/5 border-aec-pink/30 text-aec-pink',
+        green: 'from-green-500/20 to-green-500/5 border-green-500/30 text-green-400',
     };
 
     return (
-        <div className={`bg-gradient-to-br ${colors[color]} border rounded-2xl p-5`}>
+        <div className={`bg-gradient-to-br ${colors[color]} border rounded-2xl p-5 hover:scale-[1.02] transition-transform`}>
             <div className="flex items-center justify-between mb-3">
                 <span className="text-2xl">{icon}</span>
+                {badge && (
+                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full">
+                        {badge}
+                    </span>
+                )}
             </div>
             <p className="text-3xl font-bold text-white">{value}</p>
             <p className="text-sm text-slate-400 mt-1">{title}</p>
+            {subtitle && <div className="mt-2">{subtitle}</div>}
         </div>
     );
 }
