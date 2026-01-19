@@ -36,11 +36,28 @@ export default function Admin() {
             ]);
 
             setStats(statsRes.data);
-            setUsers(usersRes.data || []);
-            setPendingUsers((usersRes.data || []).filter(u => u.status === 'pendente'));
-            setTemporadas(temporadasRes.data || []);
+
+            // Defensive array handling - API might return object with items/data or direct array
+            let usersArray = usersRes.data;
+            if (usersArray && !Array.isArray(usersArray)) {
+                usersArray = usersArray.items || usersArray.data || usersArray.users || [];
+            }
+            usersArray = Array.isArray(usersArray) ? usersArray : [];
+
+            let temporadasArray = temporadasRes.data;
+            if (temporadasArray && !Array.isArray(temporadasArray)) {
+                temporadasArray = temporadasArray.items || temporadasArray.data || temporadasArray.temporadas || [];
+            }
+            temporadasArray = Array.isArray(temporadasArray) ? temporadasArray : [];
+
+            setUsers(usersArray);
+            setPendingUsers(usersArray.filter(u => u.status === 'pendente'));
+            setTemporadas(temporadasArray);
         } catch (error) {
             console.error('Erro ao carregar dados:', error);
+            setUsers([]);
+            setPendingUsers([]);
+            setTemporadas([]);
         } finally {
             setLoading(false);
         }
