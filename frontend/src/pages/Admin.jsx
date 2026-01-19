@@ -68,7 +68,8 @@ export default function Admin() {
             await api.patch(`/users/${userId}/approve`, { acao: 'aprovar' });
             fetchData();
         } catch (error) {
-            alert('Erro ao aprovar usuário');
+            console.error('Erro ao aprovar:', error);
+            alert(`Erro ao aprovar usuário: ${error.response?.data?.detail || error.message}`);
         }
     };
 
@@ -77,7 +78,8 @@ export default function Admin() {
             await api.patch(`/users/${userId}/approve`, { acao: 'recusar' });
             fetchData();
         } catch (error) {
-            alert('Erro ao recusar usuário');
+            console.error('Erro ao recusar:', error);
+            alert(`Erro ao recusar usuário: ${error.response?.data?.detail || error.message}`);
         }
     };
 
