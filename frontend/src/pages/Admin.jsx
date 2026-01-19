@@ -294,6 +294,16 @@ export default function Admin() {
                                 <span>📊</span>
                                 <span className="font-medium">Relatórios</span>
                             </button>
+                            <button
+                                onClick={() => setActiveTab('configuracoes')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'configuracoes'
+                                    ? 'bg-aec-pink/20 text-aec-pink border border-aec-pink/30'
+                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    }`}
+                            >
+                                <span>⚙️</span>
+                                <span className="font-medium">Configurações</span>
+                            </button>
                             <div className="border-t border-slate-800 my-4"></div>
                             <button
                                 onClick={() => navigate('/temporadas')}
@@ -344,6 +354,9 @@ export default function Admin() {
                         )}
                         {activeTab === 'relatorios' && (
                             <RelatoriosTab />
+                        )}
+                        {activeTab === 'configuracoes' && (
+                            <ConfiguracoesTab />
                         )}
                     </main>
                 </div>
@@ -2924,8 +2937,8 @@ function RelatoriosTab() {
                                     key={d}
                                     onClick={() => { setPeriodo(d); fetchReportData(activeReport); }}
                                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${periodo === d
-                                            ? 'bg-aec-pink text-white'
-                                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                                        ? 'bg-aec-pink text-white'
+                                        : 'bg-slate-800 text-slate-400 hover:text-white'
                                         }`}
                                 >
                                     {d === '7' ? '7 dias' : d === '30' ? '30 dias' : d === '90' ? '3 meses' : '1 ano'}
@@ -3101,6 +3114,410 @@ function RelatoriosTab() {
                     </div>
                     <div className="p-6">
                         {renderReportContent()}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Configuracoes Tab Component - Sprint 7
+function ConfiguracoesTab() {
+    const [activeModule, setActiveModule] = useState(null);
+    const [configs, setConfigs] = useState({
+        visual: {
+            corPrimaria: '#be185d',
+            logoUrl: '',
+            modoEscuro: true
+        },
+        email: {
+            templateBoasVindas: 'Olá {{nome}}, seja bem-vindo ao Next Level Podcast!',
+            templateAprovacao: 'Parabéns {{nome}}! Seu cadastro foi aprovado.',
+            templateRecuperacao: 'Clique no link para recuperar sua senha: {{link}}'
+        },
+        seguranca: {
+            minCaractereSenha: 8,
+            exigirMaiuscula: true,
+            exigirNumero: true,
+            sessaoHoras: 24,
+            twoFactorEnabled: false
+        },
+        armazenamento: {
+            totalArquivos: 47,
+            espacoUsado: '125 MB',
+            espacoTotal: '500 MB'
+        },
+        integracoes: {
+            webhookUrl: '',
+            googleAnalytics: false,
+            s3Enabled: false
+        },
+        backup: {
+            ultimoBackup: '18/01/2026 23:00',
+            versaoApp: '1.0.0'
+        }
+    });
+    const [saving, setSaving] = useState(false);
+
+    const modulos = [
+        { id: 'visual', titulo: 'Personalização Visual', descricao: 'Logo, cores e tema', icon: '🎨' },
+        { id: 'email', titulo: 'Templates de Email', descricao: 'Mensagens automáticas', icon: '📧' },
+        { id: 'seguranca', titulo: 'Segurança', descricao: 'Senha e autenticação', icon: '🔐' },
+        { id: 'armazenamento', titulo: 'Armazenamento', descricao: 'Arquivos e cache', icon: '💾' },
+        { id: 'integracoes', titulo: 'Integrações', descricao: 'APIs e webhooks', icon: '🔗' },
+        { id: 'backup', titulo: 'Backup e Manutenção', descricao: 'Exportar dados', icon: '🗄️' }
+    ];
+
+    const handleSave = () => {
+        setSaving(true);
+        setTimeout(() => {
+            setSaving(false);
+            alert('Configurações salvas com sucesso!');
+        }, 1000);
+    };
+
+    const exportToCSV = (type) => {
+        let csvContent = '';
+        let filename = '';
+
+        if (type === 'usuarios') {
+            csvContent = 'ID,Nome,Email,Status,Perfil\n1,Admin,admin@test.com,ativo,admin';
+            filename = 'usuarios_export.csv';
+        } else if (type === 'temporadas') {
+            csvContent = 'ID,Nome,Status,Episodios\n1,Temporada Zero,publicado,5';
+            filename = 'temporadas_export.csv';
+        }
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    };
+
+    const renderModuleContent = () => {
+        switch (activeModule) {
+            case 'visual':
+                return (
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block text-sm text-slate-400 mb-2">Logo (URL)</label>
+                            <input
+                                type="text"
+                                value={configs.visual.logoUrl}
+                                onChange={(e) => setConfigs({ ...configs, visual: { ...configs.visual, logoUrl: e.target.value } })}
+                                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                placeholder="https://exemplo.com/logo.png"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm text-slate-400 mb-2">Cor Primária</label>
+                            <div className="flex gap-3">
+                                <input
+                                    type="color"
+                                    value={configs.visual.corPrimaria}
+                                    onChange={(e) => setConfigs({ ...configs, visual: { ...configs.visual, corPrimaria: e.target.value } })}
+                                    className="w-16 h-12 rounded-lg cursor-pointer"
+                                />
+                                <input
+                                    type="text"
+                                    value={configs.visual.corPrimaria}
+                                    onChange={(e) => setConfigs({ ...configs, visual: { ...configs.visual, corPrimaria: e.target.value } })}
+                                    className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none font-mono"
+                                />
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                            <div>
+                                <div className="text-white font-medium">Modo Escuro</div>
+                                <div className="text-sm text-slate-400">Tema padrão da aplicação</div>
+                            </div>
+                            <button
+                                onClick={() => setConfigs({ ...configs, visual: { ...configs.visual, modoEscuro: !configs.visual.modoEscuro } })}
+                                className={`w-14 h-8 rounded-full transition-colors ${configs.visual.modoEscuro ? 'bg-aec-pink' : 'bg-slate-600'}`}
+                            >
+                                <div className={`w-6 h-6 bg-white rounded-full transition-transform ${configs.visual.modoEscuro ? 'translate-x-7' : 'translate-x-1'}`}></div>
+                            </button>
+                        </div>
+                    </div>
+                );
+
+            case 'email':
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                            <p className="text-sm text-slate-400 mb-2">Variáveis disponíveis:</p>
+                            <div className="flex flex-wrap gap-2">
+                                {['{{nome}}', '{{email}}', '{{link}}'].map(v => (
+                                    <code key={v} className="px-2 py-1 bg-slate-700 text-aec-pink rounded text-sm">{v}</code>
+                                ))}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm text-slate-400 mb-2">Template: Boas-vindas</label>
+                            <textarea
+                                value={configs.email.templateBoasVindas}
+                                onChange={(e) => setConfigs({ ...configs, email: { ...configs.email, templateBoasVindas: e.target.value } })}
+                                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none resize-none"
+                                rows={3}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm text-slate-400 mb-2">Template: Aprovação de Cadastro</label>
+                            <textarea
+                                value={configs.email.templateAprovacao}
+                                onChange={(e) => setConfigs({ ...configs, email: { ...configs.email, templateAprovacao: e.target.value } })}
+                                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none resize-none"
+                                rows={3}
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-sm text-slate-400 mb-2">Template: Recuperação de Senha</label>
+                            <textarea
+                                value={configs.email.templateRecuperacao}
+                                onChange={(e) => setConfigs({ ...configs, email: { ...configs.email, templateRecuperacao: e.target.value } })}
+                                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none resize-none"
+                                rows={3}
+                            />
+                        </div>
+                    </div>
+                );
+
+            case 'seguranca':
+                return (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Mínimo de Caracteres</label>
+                                <input
+                                    type="number"
+                                    value={configs.seguranca.minCaractereSenha}
+                                    onChange={(e) => setConfigs({ ...configs, seguranca: { ...configs.seguranca, minCaractereSenha: parseInt(e.target.value) } })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                    min={6}
+                                    max={32}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Sessão (horas)</label>
+                                <input
+                                    type="number"
+                                    value={configs.seguranca.sessaoHoras}
+                                    onChange={(e) => setConfigs({ ...configs, seguranca: { ...configs.seguranca, sessaoHoras: parseInt(e.target.value) } })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                    min={1}
+                                    max={168}
+                                />
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            {[
+                                { key: 'exigirMaiuscula', label: 'Exigir letra maiúscula' },
+                                { key: 'exigirNumero', label: 'Exigir número' },
+                                { key: 'twoFactorEnabled', label: 'Autenticação 2FA (em breve)' }
+                            ].map(item => (
+                                <div key={item.key} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                                    <span className="text-white">{item.label}</span>
+                                    <button
+                                        onClick={() => setConfigs({ ...configs, seguranca: { ...configs.seguranca, [item.key]: !configs.seguranca[item.key] } })}
+                                        disabled={item.key === 'twoFactorEnabled'}
+                                        className={`w-14 h-8 rounded-full transition-colors ${configs.seguranca[item.key] ? 'bg-aec-pink' : 'bg-slate-600'} ${item.key === 'twoFactorEnabled' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                    >
+                                        <div className={`w-6 h-6 bg-white rounded-full transition-transform ${configs.seguranca[item.key] ? 'translate-x-7' : 'translate-x-1'}`}></div>
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+
+            case 'armazenamento':
+                return (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 text-center">
+                                <div className="text-2xl font-bold text-white">{configs.armazenamento.totalArquivos}</div>
+                                <div className="text-sm text-slate-400">Total Arquivos</div>
+                            </div>
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 text-center">
+                                <div className="text-2xl font-bold text-blue-400">{configs.armazenamento.espacoUsado}</div>
+                                <div className="text-sm text-slate-400">Espaço Usado</div>
+                            </div>
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 text-center">
+                                <div className="text-2xl font-bold text-green-400">{configs.armazenamento.espacoTotal}</div>
+                                <div className="text-sm text-slate-400">Espaço Total</div>
+                            </div>
+                        </div>
+                        <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-slate-400">Uso do armazenamento</span>
+                                <span className="text-white font-medium">25%</span>
+                            </div>
+                            <div className="h-3 bg-slate-700 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-aec-pink to-purple-500 w-1/4 rounded-full"></div>
+                            </div>
+                        </div>
+                        <button className="w-full px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl transition-colors border border-slate-700">
+                            🗑️ Limpar Cache
+                        </button>
+                    </div>
+                );
+
+            case 'integracoes':
+                return (
+                    <div className="space-y-6">
+                        <div>
+                            <label className="block text-sm text-slate-400 mb-2">Webhook URL</label>
+                            <input
+                                type="text"
+                                value={configs.integracoes.webhookUrl}
+                                onChange={(e) => setConfigs({ ...configs, integracoes: { ...configs.integracoes, webhookUrl: e.target.value } })}
+                                className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                placeholder="https://seu-servidor.com/webhook"
+                            />
+                        </div>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">📈</span>
+                                    <div>
+                                        <div className="text-white font-medium">Google Analytics</div>
+                                        <div className="text-sm text-slate-400">Rastrear visitantes</div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setConfigs({ ...configs, integracoes: { ...configs.integracoes, googleAnalytics: !configs.integracoes.googleAnalytics } })}
+                                    className={`w-14 h-8 rounded-full transition-colors ${configs.integracoes.googleAnalytics ? 'bg-aec-pink' : 'bg-slate-600'}`}
+                                >
+                                    <div className={`w-6 h-6 bg-white rounded-full transition-transform ${configs.integracoes.googleAnalytics ? 'translate-x-7' : 'translate-x-1'}`}></div>
+                                </button>
+                            </div>
+                            <div className="flex items-center justify-between p-4 bg-slate-800/50 rounded-xl border border-slate-700 opacity-60">
+                                <div className="flex items-center gap-3">
+                                    <span className="text-2xl">☁️</span>
+                                    <div>
+                                        <div className="text-white font-medium">Amazon S3</div>
+                                        <div className="text-sm text-slate-400">Armazenamento de mídia (em breve)</div>
+                                    </div>
+                                </div>
+                                <span className="text-xs bg-slate-700 px-2 py-1 rounded text-slate-400">Em breve</span>
+                            </div>
+                        </div>
+                    </div>
+                );
+
+            case 'backup':
+                return (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                <div className="text-sm text-slate-400">Último Backup</div>
+                                <div className="text-lg font-medium text-white">{configs.backup.ultimoBackup}</div>
+                            </div>
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                <div className="text-sm text-slate-400">Versão do App</div>
+                                <div className="text-lg font-medium text-aec-pink">{configs.backup.versaoApp}</div>
+                            </div>
+                        </div>
+                        <div className="space-y-3">
+                            <h4 className="text-white font-medium">Exportar Dados</h4>
+                            <div className="grid grid-cols-2 gap-3">
+                                <button
+                                    onClick={() => exportToCSV('usuarios')}
+                                    className="px-4 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
+                                >
+                                    📥 Exportar Usuários
+                                </button>
+                                <button
+                                    onClick={() => exportToCSV('temporadas')}
+                                    className="px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-colors flex items-center justify-center gap-2"
+                                >
+                                    📥 Exportar Temporadas
+                                </button>
+                            </div>
+                        </div>
+                        <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                            <h4 className="text-white font-medium mb-3">Logs do Sistema</h4>
+                            <div className="space-y-2 font-mono text-sm">
+                                {[
+                                    { time: '07:40:25', msg: 'Deploy Sprint 6 concluído', type: 'success' },
+                                    { time: '07:35:12', msg: 'Usuário admin logou', type: 'info' },
+                                    { time: '07:30:00', msg: 'Backup automático realizado', type: 'info' }
+                                ].map((log, i) => (
+                                    <div key={i} className="flex gap-3 text-slate-400">
+                                        <span className="text-slate-500">[{log.time}]</span>
+                                        <span className={log.type === 'success' ? 'text-green-400' : ''}>{log.msg}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                );
+
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-white">Configurações</h2>
+                    <p className="text-slate-400 text-sm">Personalize a plataforma</p>
+                </div>
+            </div>
+
+            {!activeModule ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {modulos.map(mod => (
+                        <button
+                            key={mod.id}
+                            onClick={() => setActiveModule(mod.id)}
+                            className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 text-left hover:border-aec-pink/50 hover:bg-slate-800/50 transition-all group"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-gradient-to-br from-aec-pink/20 to-purple-600/20 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                                    {mod.icon}
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white text-lg">{mod.titulo}</h3>
+                                    <p className="text-slate-400 text-sm">{mod.descricao}</p>
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-800/30">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => setActiveModule(null)}
+                                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                            >
+                                ← Voltar
+                            </button>
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">{modulos.find(m => m.id === activeModule)?.icon}</span>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">{modulos.find(m => m.id === activeModule)?.titulo}</h3>
+                                    <p className="text-sm text-slate-400">{modulos.find(m => m.id === activeModule)?.descricao}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="px-6 py-2 bg-aec-pink hover:bg-aec-pinkDark disabled:opacity-50 text-white rounded-xl transition-colors font-medium flex items-center gap-2"
+                        >
+                            {saving ? (
+                                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            ) : '💾'} Salvar
+                        </button>
+                    </div>
+                    <div className="p-6">
+                        {renderModuleContent()}
                     </div>
                 </div>
             )}
