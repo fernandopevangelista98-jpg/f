@@ -101,6 +101,47 @@ export default function Admin() {
         }
     };
 
+    // --- Season Handlers ---
+    const handleCreateSeason = async (seasonData) => {
+        try {
+            await api.post('/temporadas', seasonData);
+            fetchData();
+        } catch (error) {
+            console.error('Erro ao criar temporada:', error);
+            alert('Erro ao criar temporada');
+        }
+    };
+
+    const handleUpdateSeason = async (seasonData) => {
+        try {
+            await api.put(`/temporadas/${seasonData.id}`, seasonData);
+            fetchData();
+        } catch (error) {
+            console.error('Erro ao atualizar temporada:', error);
+            alert('Erro ao atualizar temporada');
+        }
+    };
+
+    const handleDuplicateSeason = async (seasonId) => {
+        try {
+            await api.post(`/temporadas/${seasonId}/duplicate`);
+            fetchData();
+        } catch (error) {
+            console.error('Erro ao duplicar temporada:', error);
+            alert('Erro ao duplicar temporada');
+        }
+    };
+
+    const handleDeleteSeason = async (seasonId) => {
+        try {
+            await api.delete(`/temporadas/${seasonId}`);
+            fetchData();
+        } catch (error) {
+            console.error('Erro ao deletar temporada:', error);
+            alert('Erro ao deletar temporada');
+        }
+    };
+
     const handleLogout = () => {
         logout();
         navigate('/');
@@ -236,7 +277,14 @@ export default function Admin() {
                             />
                         )}
                         {activeTab === 'temporadas' && (
-                            <TemporadasTab temporadas={temporadas} onRefresh={fetchData} />
+                            <TemporadasTab
+                                temporadas={temporadas}
+                                onRefresh={fetchData}
+                                onCreate={handleCreateSeason}
+                                onUpdate={handleUpdateSeason}
+                                onDuplicate={handleDuplicateSeason}
+                                onDelete={handleDeleteSeason}
+                            />
                         )}
                         {activeTab === 'provas' && (
                             <ProvasTab />
@@ -1111,14 +1159,71 @@ function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh, onSave,
     );
 }
 
-// Temporadas Tab Component
-function TemporadasTab({ temporadas, onRefresh }) {
+// Temporadas Tab Component - Enhanced for Sprint 3
+function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate, onDelete }) {
+    const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [selectedSeason, setSelectedSeason] = useState(null);
+    const [formData, setFormData] = useState({
+        nome: '',
+        descricao: '',
+        ordem: 1,
+        mantra: '',
+        status: 'rascunho',
+        capa_url: '' // Placeholder for future R2 integration
+    });
+
+    const openCreateModal = () => {
+        setFormData({
+            nome: '',
+            descricao: '',
+            ordem: temporadas.length + 1,
+            mantra: '',
+            status: 'rascunho',
+            capa_url: ''
+        });
+        setShowCreateModal(true);
+    };
+
+    const openEditModal = (season) => {
+        setSelectedSeason(season);
+        setFormData({
+            ...season,
+            capa_url: season.capa_url || ''
+        });
+        setShowEditModal(true);
+    };
+
+    const openDeleteModal = (season) => {
+        setSelectedSeason(season);
+        setShowDeleteModal(true);
+    };
+
+    const handleSubmitCreate = (e) => {
+        e.preventDefault();
+        onCreate(formData);
+        setShowCreateModal(false);
+    };
+
+    const handleSubmitEdit = (e) => {
+        e.preventDefault();
+        onUpdate({ ...formData, id: selectedSeason.id });
+        setShowEditModal(false);
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white">Temporadas</h2>
-                <button className="px-4 py-2 bg-aec-pink text-white rounded-xl hover:bg-aec-pinkDark transition-colors font-medium">
-                    + Nova Temporada
+                <div>
+                    <h2 className="text-2xl font-bold text-white">Temporadas</h2>
+                    <p className="text-slate-400 text-sm">Gerencie as temporadas do podcast</p>
+                </div>
+                <button
+                    onClick={openCreateModal}
+                    className="px-4 py-2 bg-aec-pink text-white rounded-xl hover:bg-aec-pinkDark transition-colors font-medium flex items-center gap-2"
+                >
+                    <span>+</span> Nova Temporada
                 </button>
             </div>
 
@@ -1128,25 +1233,274 @@ function TemporadasTab({ temporadas, onRefresh }) {
                     <p className="text-slate-400">Nenhuma temporada cadastrada</p>
                 </div>
             ) : (
-                <div className="grid gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {temporadas.map(temp => (
-                        <div key={temp.id} className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 bg-gradient-to-br from-aec-pink to-purple-600 rounded-2xl flex items-center justify-center text-2xl font-bold text-white">
-                                    {temp.numero}
+                        <div key={temp.id} className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 flex flex-col gap-4 group hover:border-slate-700 transition-all">
+                            <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-16 h-16 bg-gradient-to-br from-aec-pink to-purple-600 rounded-2xl flex items-center justify-center text-2xl font-bold text-white shadow-lg">
+                                        {temp.ordem}
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-white text-lg">{temp.nome}</h3>
+                                        <div className={`text-xs px-2 py-0.5 rounded-full w-fit mt-1 ${temp.status === 'publicado'
+                                                ? 'bg-green-500/20 text-green-400 border border-green-500/20'
+                                                : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/20'
+                                            }`}>
+                                            {temp.status === 'publicado' ? 'Publicado' : 'Rascunho'}
+                                        </div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-white text-lg">{temp.titulo}</h3>
-                                    <p className="text-sm text-slate-400">{temp.descricao}</p>
+                                <div className="relative">
+                                    <button
+                                        onClick={() => openEditModal(temp)}
+                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                                        title="Editar"
+                                    >
+                                        ✏️
+                                    </button>
                                 </div>
                             </div>
-                            <div className="flex gap-2">
-                                <button className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors">
-                                    Editar
+
+                            <p className="text-sm text-slate-400 line-clamp-2 min-h-[40px]">
+                                {temp.descricao || 'Sem descrição definida.'}
+                            </p>
+
+                            <div className="text-xs text-slate-500 italic border-l-2 border-slate-700 pl-3">
+                                "{temp.mantra || 'Sem mantra definido'}"
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-800 flex items-center gap-2 mt-auto">
+                                <button
+                                    onClick={() => onDuplicate(temp.id)}
+                                    className="flex-1 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 text-sm transition-colors"
+                                >
+                                    Duplicar
+                                </button>
+                                <button
+                                    onClick={() => openDeleteModal(temp)}
+                                    className="px-3 py-2 bg-red-500/10 text-red-400 rounded-lg hover:bg-red-500/20 text-sm transition-colors"
+                                    title="Excluir"
+                                >
+                                    🗑️
                                 </button>
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Modal Criar Temporada */}
+            {showCreateModal && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg">
+                        <h3 className="text-xl font-bold text-white mb-6">Nova Temporada</h3>
+                        <form onSubmit={handleSubmitCreate} className="space-y-4">
+                            <div className="grid grid-cols-4 gap-4">
+                                <div className="col-span-1">
+                                    <label className="block text-sm text-slate-400 mb-2">Ordem</label>
+                                    <input
+                                        type="number"
+                                        value={formData.ordem}
+                                        onChange={(e) => setFormData({ ...formData, ordem: parseInt(e.target.value) })}
+                                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                        required
+                                    />
+                                </div>
+                                <div className="col-span-3">
+                                    <label className="block text-sm text-slate-400 mb-2">Nome da Temporada</label>
+                                    <input
+                                        type="text"
+                                        value={formData.nome}
+                                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                        placeholder="Ex: Fundamentos da IA"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Descrição</label>
+                                <textarea
+                                    value={formData.descricao}
+                                    onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none resize-none"
+                                    rows={3}
+                                    placeholder="Breve resumo da temporada..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Mantra</label>
+                                <input
+                                    type="text"
+                                    value={formData.mantra}
+                                    onChange={(e) => setFormData({ ...formData, mantra: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                    placeholder="Ex: O conhecimento é a chave..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Status</label>
+                                <div className="flex bg-slate-800 p-1 rounded-xl">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, status: 'rascunho' })}
+                                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'rascunho' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        Rascunho
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, status: 'publicado' })}
+                                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'publicado' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        Publicado
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-4 border-t border-slate-800 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCreateModal(false)}
+                                    className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-3 bg-aec-pink text-white rounded-xl hover:bg-aec-pinkDark transition-colors font-medium"
+                                >
+                                    Criar Temporada
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Editar Temporada */}
+            {showEditModal && selectedSeason && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg">
+                        <h3 className="text-xl font-bold text-white mb-6">Editar Temporada</h3>
+                        <form onSubmit={handleSubmitEdit} className="space-y-4">
+                            <div className="grid grid-cols-4 gap-4">
+                                <div className="col-span-1">
+                                    <label className="block text-sm text-slate-400 mb-2">Ordem</label>
+                                    <input
+                                        type="number"
+                                        value={formData.ordem}
+                                        onChange={(e) => setFormData({ ...formData, ordem: parseInt(e.target.value) })}
+                                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                        required
+                                    />
+                                </div>
+                                <div className="col-span-3">
+                                    <label className="block text-sm text-slate-400 mb-2">Nome</label>
+                                    <input
+                                        type="text"
+                                        value={formData.nome}
+                                        onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Descrição</label>
+                                <textarea
+                                    value={formData.descricao || ''}
+                                    onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none resize-none"
+                                    rows={3}
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Mantra</label>
+                                <input
+                                    type="text"
+                                    value={formData.mantra || ''}
+                                    onChange={(e) => setFormData({ ...formData, mantra: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Status</label>
+                                <div className="flex bg-slate-800 p-1 rounded-xl">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, status: 'rascunho' })}
+                                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'rascunho' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        Rascunho
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, status: 'publicado' })}
+                                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'publicado' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        Publicado
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-4 border-t border-slate-800 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowEditModal(false)}
+                                    className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-3 bg-aec-pink text-white rounded-xl hover:bg-aec-pinkDark transition-colors font-medium"
+                                >
+                                    Salvar Alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Deletar Temporada */}
+            {showDeleteModal && selectedSeason && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md text-center">
+                        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                            🗑️
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">Excluir Temporada?</h3>
+                        <p className="text-slate-400 mb-6">
+                            Você está prestes a excluir <strong>{selectedSeason.nome}</strong>.
+                            Isso também excluirá todos os episódios associados. Esta ação não pode ser desfeita.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={() => {
+                                    onDelete(selectedSeason.id);
+                                    setShowDeleteModal(false);
+                                }}
+                                className="flex-1 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium"
+                            >
+                                Sim, Excluir
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
