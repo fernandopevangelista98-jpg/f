@@ -81,6 +81,26 @@ export default function Admin() {
         }
     };
 
+    const handleSaveUser = async (user) => {
+        try {
+            await api.put(`/users/${user.id}`, user);
+            fetchData();
+        } catch (error) {
+            console.error('Erro ao salvar usuário:', error);
+            alert('Erro ao salvar as alterações do usuário');
+        }
+    };
+
+    const handleDeleteUser = async (userId) => {
+        try {
+            await api.delete(`/users/${userId}`);
+            fetchData();
+        } catch (error) {
+            console.error('Erro ao deletar usuário:', error);
+            alert('Erro ao deletar o usuário');
+        }
+    };
+
     const handleLogout = () => {
         logout();
         navigate('/');
@@ -211,6 +231,8 @@ export default function Admin() {
                                 onApprove={handleApprove}
                                 onReject={handleReject}
                                 onRefresh={fetchData}
+                                onSave={handleSaveUser}
+                                onDelete={handleDeleteUser}
                             />
                         )}
                         {activeTab === 'temporadas' && (
@@ -596,7 +618,7 @@ function StatCard({ title, value, icon, color, subtitle, badge }) {
 }
 
 // Users Tab Component - Enhanced with Filters, Modals, and Actions
-function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh }) {
+function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh, onSave, onDelete }) {
     const [filter, setFilter] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
     const [areaFilter, setAreaFilter] = useState('all');
@@ -836,8 +858,8 @@ function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh }) {
                                 <td className="p-4">
                                     <div className="flex items-center gap-3">
                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${user.status === 'ativo' ? 'bg-green-500/20 text-green-400' :
-                                                user.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                    'bg-red-500/20 text-red-400'
+                                            user.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                'bg-red-500/20 text-red-400'
                                             }`}>
                                             {user.nome_completo?.charAt(0).toUpperCase() || '?'}
                                         </div>
@@ -854,8 +876,8 @@ function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh }) {
                                 </td>
                                 <td className="p-4">
                                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.status === 'ativo' ? 'bg-green-500/20 text-green-400' :
-                                            user.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
-                                                'bg-red-500/20 text-red-400'
+                                        user.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
+                                            'bg-red-500/20 text-red-400'
                                         }`}>
                                         {user.status}
                                     </span>
@@ -925,8 +947,8 @@ function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh }) {
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-4">
                                 <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold ${selectedUser.status === 'ativo' ? 'bg-green-500/20 text-green-400' :
-                                        selectedUser.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
-                                            'bg-red-500/20 text-red-400'
+                                    selectedUser.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
+                                        'bg-red-500/20 text-red-400'
                                     }`}>
                                     {selectedUser.nome_completo?.charAt(0).toUpperCase()}
                                 </div>
@@ -953,8 +975,8 @@ function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh }) {
                             <div className="bg-slate-800/50 rounded-xl p-4">
                                 <p className="text-slate-400 text-sm">Status</p>
                                 <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedUser.status === 'ativo' ? 'bg-green-500/20 text-green-400' :
-                                        selectedUser.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
-                                            'bg-red-500/20 text-red-400'
+                                    selectedUser.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
+                                        'bg-red-500/20 text-red-400'
                                     }`}>{selectedUser.status}</span>
                             </div>
                             <div className="bg-slate-800/50 rounded-xl p-4">
@@ -1030,7 +1052,23 @@ function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh }) {
                                 <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl hover:bg-slate-600">
                                     Cancelar
                                 </button>
-                                <button type="submit" className="flex-1 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 font-medium">
+                                <button
+                                    type="submit"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        const form = e.target.closest('form');
+                                        const updatedUser = {
+                                            ...selectedUser,
+                                            nome_completo: form.querySelector('input[type="text"]').value,
+                                            area: form.querySelector('select:nth-of-type(1)').value,
+                                            cargo: form.querySelector('select:nth-of-type(2)').value,
+                                            status: form.querySelector('input[name="status"]:checked').value
+                                        };
+                                        onSave(updatedUser);
+                                        setShowEditModal(false);
+                                    }}
+                                    className="flex-1 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 font-medium"
+                                >
                                     Salvar Alterações
                                 </button>
                             </div>
@@ -1056,7 +1094,13 @@ function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh }) {
                             <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl hover:bg-slate-600">
                                 Cancelar
                             </button>
-                            <button className="flex-1 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium">
+                            <button
+                                onClick={() => {
+                                    onDelete(selectedUser.id);
+                                    setShowDeleteModal(false);
+                                }}
+                                className="flex-1 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium"
+                            >
                                 Deletar Permanentemente
                             </button>
                         </div>
