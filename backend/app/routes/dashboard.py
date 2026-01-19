@@ -14,6 +14,9 @@ from app.models.episodio import Episodio
 from app.models.prova import Prova, ResultadoProva, Pergunta, OpcaoResposta
 from app.models.progresso import UsuarioEpisodio
 from app.utils.jwt import get_current_admin
+import boto3
+from botocore.client import Config
+import os
 
 router = APIRouter()
 
@@ -25,14 +28,41 @@ async def get_dashboard_stats(
     """
     Obtém estatísticas gerais para o dashboard admin.
     """
-    # Armazenamento (PostgreSQL Size)
+    # 1. Armazenamento DB (PostgreSQL Size)
     try:
         db_name = db.bind.url.database
         query_size = text("SELECT pg_database_size(:db_name)")
-        size_bytes = db.execute(query_size, {"db_name": db_name}).scalar()
-        size_mb = round(size_bytes / (1024 * 1024), 1)
+        db_size_bytes = db.execute(query_size, {"db_name": db_name}).scalar() or 0
     except Exception:
-        size_mb = 0  # Fallback caso falhe permissão ou outro erro
+        db_size_bytes = 0
+
+    # 2. Armazenamento Arquivos (S3/R2 Cloud)
+    s3_size_bytes = 0
+    try:
+        # Tenta conectar se houver credenciais
+        R2_ACCOUNT_ID = os.getenv("R2_ACCOUNT_ID")
+        R2_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID")
+        R2_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY")
+        R2_BUCKET_NAME = os.getenv("R2_BUCKET_NAME", "podcast-aec")
+        
+        if R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY:
+             s3 = boto3.client(
+                's3',
+                endpoint_url=os.getenv("R2_ENDPOINT", f"https://{R2_ACCOUNT_ID}.r2.cloudflarestorage.com"),
+                aws_access_key_id=R2_ACCESS_KEY_ID,
+                aws_secret_access_key=R2_SECRET_ACCESS_KEY,
+                config=Config(signature_version='s3v4'),
+                region_name='auto'
+            )
+             response = s3.list_objects_v2(Bucket=R2_BUCKET_NAME)
+             s3_size_bytes = sum(obj.get('Size', 0) for obj in response.get('Contents', []))
+    except Exception as e:
+        print(f"Erro ao ler S3 stats: {e}")
+        s3_size_bytes = 0
+
+    total_size_mb = round((db_size_bytes + s3_size_bytes) / (1024 * 1024), 2)
+    size_mb = total_size_mb # Compatibilidade com variável existente
+
 
     # Usuários
     total_usuarios = db.query(User).count()
