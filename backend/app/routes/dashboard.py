@@ -21,7 +21,7 @@ import os
 router = APIRouter()
 
 @router.get("/stats")
-async def get_dashboard_stats(
+def get_dashboard_stats(
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):
@@ -117,7 +117,7 @@ async def get_dashboard_stats(
     }
 
 @router.get("/users-progress")
-async def get_users_progress(
+def get_users_progress(
     limit: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
@@ -160,7 +160,7 @@ async def get_users_progress(
     return {"users": result}
 
 @router.get("/provas-performance")
-async def get_provas_performance(
+def get_provas_performance(
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
 ):
@@ -194,7 +194,7 @@ async def get_provas_performance(
     return {"provas": provas_stats}
 
 @router.get("/episodios-ranking")
-async def get_episodios_ranking(
+def get_episodios_ranking(
     limit: int = Query(10, ge=1, le=50),
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
@@ -233,7 +233,7 @@ async def get_episodios_ranking(
     return {"episodios": result}
 
 @router.get("/novos-usuarios")
-async def get_novos_usuarios(
+def get_novos_usuarios(
     dias: int = Query(30, ge=1, le=365),
     db: Session = Depends(get_db),
     current_admin: User = Depends(get_current_admin)
