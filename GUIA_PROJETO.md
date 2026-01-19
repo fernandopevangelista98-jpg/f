@@ -1,257 +1,165 @@
-# 📜 GUIA DO PROJETO - Podcast Educativo AI
+# 📘 GUIA COMPLETO DO PROJETO - PODCAST EDUCATIVO AI
 
-> **Última Atualização:** 19/01/2026 às 10:05
-> **Status Geral:** ✅ Sprint 8 Concluída | 🎉 PAINEL ADMIN COMPLETO
-
----
-
-## 🎯 VISÃO GERAL DO PROJETO
-
-**Nome:** Original AeC - Academia de Excelência
-**Objetivo:** Plataforma de podcast educativo para treinamento de analistas de qualidade da AeC
-**Tipo:** Aplicação Web Full-Stack (SPA + API REST)
+> **Projeto:** Original AeC - Academia de Excelência  
+> **Versão:** 1.8.0 (Sprint 8 Concluída)  
+> **Última Atualização:** 19/01/2026
 
 ---
 
-## 🌍 URLS DE PRODUÇÃO (ATUAIS)
+## 1. 🎯 O QUE É ESTE PROJETO?
 
-| Serviço | URL | Provedor | Plano |
-|---------|-----|----------|-------|
-| **Frontend** | https://f-bay-eight.vercel.app | Vercel | Free |
-| **Backend API** | https://podcast-backend-fvsu.onrender.com | Render | Free |
-| **Documentação API** | https://podcast-backend-fvsu.onrender.com/docs | Render | - |
-| **Banco de Dados** | `postgresql+psycopg://...@crossover.proxy.rlwy.net:51819/railway` | Railway | Free |
+O **Original AeC - Academia de Excelência** é uma plataforma de educação corporativa moderna, estilo "Netflix/Spotify", focada no treinamento de analistas de qualidade da AeC.
 
----
+**Problema que resolve:** Treinamentos corporativos tradicionais podem ser maçantes e pouco engajadores.  
+**Solução:** Uma plataforma de Learning Management System (LMS) focada em áudio (podcasts), onde o conteúdo é organizado em **Temporadas** e **Episódios**, com validação de conhecimento através de **Provas**.
 
-## 🔐 CREDENCIAIS ADMIN
-
-```
-Email: fernando.p.evangelista98@gmail.com
-Senha: Admin@2026
-Perfil: admin
-Status: ativo
-```
+### 👥 Perfis de Usuário
+1.  **Aluno (Analista):** Ouve os podcasts, acompanha seu progresso, realiza provas para testar o conhecimento.
+2.  **Administrador:** Gerencia usuários, cria temporadas e episódios, elabora provas, monitora relatórios de desempenho e configurações do sistema.
 
 ---
 
-## 🏗️ ARQUITETURA TÉCNICA
+## 2. 🏗️ ARQUITETURA E TECNOLOGIAS
 
-### Stack Frontend
-```
-Framework:      React 18.2.0
-Build Tool:     Vite 5.0.8
-Estilização:    TailwindCSS 3.3.6
-Roteamento:     React Router Dom 6.21.1
-HTTP Client:    Axios 1.6.2
-Gráficos:       Recharts 2.x
-State:          Context API (AuthContext)
-```
+O sistema opera como uma **Aplicação Web Full-Stack** dividida em duas partes principais (Frontend e Backend) que se comunicam via API REST.
 
-### Stack Backend
-```
-Framework:      FastAPI 0.108.0
-Linguagem:      Python 3.10+
-ORM:            SQLAlchemy 2.0.23
-Driver DB:      psycopg 3.1.14
-Auth:           python-jose (JWT), bcrypt
-Validação:      Pydantic 2.5.3, email-validator 2.1.0
-Server:         Uvicorn 0.25.0
-```
+### 🖥️ Frontend (O que o usuário vê)
+-   **Tecnologia:** React 18 (Javascript) + Vite
+-   **Estilização:** TailwindCSS (para design rápido e responsivo)
+-   **Design:** Tema escuro "Dark Mode", visual moderno com glassmorphism.
+-   **Hospedagem:** Vercel (https://f-bay-eight.vercel.app)
+-   **Responsabilidade:** Exibir as telas, tocar os áudios, mostrar gráficos (Recharts), gerenciar navegação.
 
-### Infraestrutura
-```
-Frontend Host:  Vercel (Auto-deploy via GitHub)
-Backend Host:   Render (Auto-deploy via GitHub)
-Database:       PostgreSQL 16 (Railway)
-Repositório:    https://github.com/fernandopevangelista98-jpg/f
-Branch:         main
-```
+### ⚙️ Backend (O cérebro do sistema)
+-   **Tecnologia:** Python 3.10 + FastAPI
+-   **Segurança:** Autenticação JWT (JSON Web Token) e senhas criptografadas (Bcrypt).
+-   **Hospedagem:** Render (https://podcast-backend-fvsu.onrender.com)
+-   **Responsabilidade:** processar logins, salvar dados no banco, validar provas, enviar emails.
+
+### 🗄️ Banco de Dados (A memória)
+-   **Tecnologia:** PostgreSQL 16
+-   **Hospedagem:** Railway
+-   **Responsabilidade:** Armazenar usuários, temporadas, episódios, notas de provas e histórico.
 
 ---
 
-## 📁 ESTRUTURA DE PASTAS
+## 3. 🚀 FUNCIONALIDADES DETALHADAS (MÓDULOS)
 
-```
-c:\Users\Fernando\Documents\podcast com ia\
-├── backend\
-│   ├── app\
-│   │   ├── database\
-│   │   │   └── connection.py      # Config SQLAlchemy + Engine
-│   │   ├── models\
-│   │   │   ├── user.py            # Model User
-│   │   │   ├── temporada.py       # Model Temporada
-│   │   │   ├── episodio.py        # Model Episodio
-│   │   │   ├── prova.py           # Model Prova + Pergunta + Opcao
-│   │   │   └── progresso.py       # Model Progresso
-│   │   └── routes\
-│   │       ├── auth.py            # /auth (login, register)
-│   │       ├── users.py           # /users (CRUD)
-│   │       ├── temporadas.py      # /temporadas (CRUD)
-│   │       ├── episodios.py       # /episodios (CRUD)
-│   │       ├── provas.py          # /provas (CRUD + perguntas)
-│   │       ├── progresso.py       # /usuario (progresso aluno)
-│   │       ├── storage.py         # /storage (upload arquivos)
-│   │       └── dashboard.py       # /dashboard (stats admin)
-│   ├── main.py                    # App FastAPI + CORS + Rotas
-│   ├── config.py                  # Settings (env vars)
-│   ├── create_admin.py            # Script criar admin
-│   └── requirements.txt           # Dependências Python
-│
-├── frontend\
-│   ├── src\
-│   │   ├── contexts\
-│   │   │   └── AuthContext.jsx    # Estado global de auth
-│   │   ├── pages\
-│   │   │   ├── Home.jsx           # Landing page
-│   │   │   ├── Login.jsx          # Tela de login
-│   │   │   ├── Register.jsx       # Tela de cadastro
-│   │   │   ├── Temporadas.jsx     # Lista de temporadas (aluno)
-│   │   │   ├── Prova.jsx          # Realizar prova
-│   │   │   └── Admin.jsx          # PAINEL ADMIN COMPLETO
-│   │   ├── services\
-│   │   │   └── api.js             # Axios instance + interceptor
-│   │   ├── App.jsx                # Rotas + Proteção
-│   │   ├── main.jsx               # Entry point
-│   │   └── index.css              # Estilos globais + Tailwind
-│   ├── package.json
-│   ├── tailwind.config.js
-│   ├── vite.config.js
-│   └── vercel.json                # Config rewrites SPA
-│
-└── GUIA_PROJETO.md                # Este arquivo
-```
+### 3.1. 📊 Dashboard (Admin)
+O centro de comando. Exibe cards com KPIs (Indicadores Chave de Desempenho):
+-   Total de usuários ativos.
+-   Conteúdo publicado (temporadas/episódios).
+-   Média de notas nas provas.
+-   Uso de armazenamento.
+-   **Gráficos:** Novos usuários por mês, progresso por temporada, distribuição por área.
+
+### 3.2. 👥 Gerenciador de Usuários
+Controle total sobre quem acessa a plataforma.
+-   **Listagem:** Tabela com busca e filtros (Status, Área, Cargo).
+-   **Aprovação:** Novos cadastros entram como "Pendentes" e precisam ser aprovados manualmente pelo Admin.
+-   **Ações:** Criar, Editar, Excluir, Resetar senha de usuários.
+
+### 3.3. 📚 Gestão de Conteúdo (Temporadas e Episódios)
+Onde o conteúdo educacional é criado.
+-   **Temporadas:** Conjuntos temáticos de episódios. Têm capa, título, descrição e um "mantra".
+-   **Episódios:** O conteúdo em si. Cada episódio tem áudio, vídeo (opcional), transcrição e ordem.
+-   **Status:** Podem ser salvos como "Rascunho" (invisível para alunos) ou "Publicado".
+
+### 3.4. 📝 Sistema de Avaliação (Provas)
+Para validar o aprendizado.
+-   **Provas:** Vinculadas a conteúdos ou gerais. Configurações de nota mínima, tempo limite e tentativas permitidas.
+-   **Perguntas:** Múltipla escolha (A, B, C, D). O admin cadastra a pergunta e define a correta.
+-   **Feedback:** O aluno recebe a nota imediatamente após finalizar.
+
+### 3.5. 📈 Hub de Relatórios
+Analytics avançado para tomada de decisão.
+-   **6 Relatórios:** Visão Geral, Usuários Ativos, Performance em Provas, Episódios Populares, Crescimento, Engajamento.
+-   **Exportação:** Capacidade de exportar dados brutos em CSV.
+
+### 3.6. ⚙️ Configurações e Logs
+Manutenção do sistema.
+-   **Configurações:** Personalização visual (Logo, Cores), Templates de Email, Regras de Segurança (senha forte), Backup.
+-   **Logs:** Histórico de quem fez o que (Log de Atividades) e registro de erros do sistema (Log de Erros).
 
 ---
 
-## 📊 ENDPOINTS DA API (BACKEND)
+## 4. 🔄 FLUXOS PRINCIPAIS
 
-### Autenticação
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| POST | `/auth/register` | Cadastrar novo usuário |
-| POST | `/auth/login` | Login (retorna JWT) |
+### Fluxo de Cadastro
+1.  Usuário acessa `/register` e preenche dados.
+2.  Conta é criada com status **"Pendente"**.
+3.  Admin recebe notificação (Log) e acessa aba **Usuários**.
+4.  Admin clica em **"Aprovar"**.
+5.  Usuário recebe email (simulado) e pode logar.
 
-### Usuários
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/users` | Listar todos |
-| GET | `/users/{id}` | Detalhes usuário |
-| PUT | `/users/{id}` | Atualizar usuário |
-| DELETE | `/users/{id}` | Deletar usuário |
-| PATCH | `/users/{id}/approve` | Aprovar/Recusar |
-
-### Temporadas
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/temporadas` | Listar temporadas |
-| POST | `/temporadas` | Criar temporada |
-| PUT | `/temporadas/{id}` | Atualizar |
-| DELETE | `/temporadas/{id}` | Deletar |
-
-### Episódios
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/episodios` | Listar episódios |
-| GET | `/episodios?temporada_id=xxx` | Listar por temporada |
-| POST | `/episodios` | Criar episódio |
-| PUT | `/episodios/{id}` | Atualizar |
-| DELETE | `/episodios/{id}` | Deletar |
-
-### Provas
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/provas` | Listar provas |
-| POST | `/provas` | Criar prova |
-| PUT | `/provas/{id}` | Atualizar prova |
-| POST | `/provas/{id}/perguntas` | Adicionar pergunta |
-| DELETE | `/provas/{id}` | Deletar prova |
-| DELETE | `/provas/perguntas/{id}` | Deletar pergunta |
-
-### Dashboard
-| Método | Endpoint | Descrição |
-|--------|----------|-----------|
-| GET | `/dashboard/stats` | Estatísticas gerais |
-| GET | `/dashboard/users-progress` | Progresso dos usuários |
-| GET | `/dashboard/provas-performance` | Performance das provas |
-| GET | `/dashboard/episodios-ranking` | Ranking de episódios |
-| GET | `/dashboard/novos-usuarios` | Novos usuários por período |
+### Fluxo de Consumo (Aluno)
+1.  Aluno loga e vê a **Home** com temporadas disponíveis.
+2.  Clica em uma temporada para ver os episódios.
+3.  Ouve o episódio (Player de áudio persistente).
+4.  Sistema marca automaticamente como "Concluído" ao terminar.
+5.  Se houver prova vinculada, o botão "Fazer Prova" é habilitado.
 
 ---
 
-## 🎨 PAINEL ADMINISTRATIVO
+## 5. 🛠️ GUIA DE MANUTENÇÃO E DESENVOLVIMENTO
 
-### Abas Disponíveis
+### Como rodar o projeto no seu computador (Localhost)
 
-| Aba | Funcionalidade |
-|-----|----------------|
-| 📊 Dashboard | KPIs, gráficos, atividade recente |
-| 👥 Usuários | CRUD completo, aprovação de cadastros |
-| 📚 Temporadas | Criar/editar/excluir temporadas |
-| 🎧 Episódios | Gerenciar episódios por temporada |
-| 📝 Provas | Criar provas e perguntas |
-| 📊 Relatórios | 6 relatórios com gráficos + exportação CSV |
-| ⚙️ Configurações | 6 módulos de configuração |
-| 📋 Logs | Log de atividades e erros |
+**Pré-requisitos:** Node.js, Python e Git instalados.
 
----
-
-## 🛠️ VARIÁVEIS DE AMBIENTE
-
-### Backend (Render)
-```env
-DATABASE_URL=postgresql+psycopg://postgres:OAOGWqosBElqBiDxGSwHnzNQUevNHeyu@crossover.proxy.rlwy.net:51819/railway
-SECRET_KEY=uma_chave_secreta_bem_dificil_123
-FRONTEND_URL=https://f-bay-eight.vercel.app
-PYTHON_VERSION=3.11.9
-```
-
-### Frontend (Vercel)
-```env
-VITE_API_URL=https://podcast-backend-fvsu.onrender.com
-```
-
----
-
-## 🔧 COMANDOS ÚTEIS
-
-### Rodar Localmente
+#### 1. Clonar o repositório
 ```bash
-# Backend
+git clone https://github.com/fernandopevangelista98-jpg/f.git
+cd f
+```
+
+#### 2. Configurar o Backend (API)
+```bash
 cd backend
-python -m venv venv
-.\venv\Scripts\activate
-pip install -r requirements.txt
-uvicorn main:app --reload
-
-# Frontend
-cd frontend
-npm install
-npm run dev
+python -m venv venv           # Criar ambiente virtual
+.\venv\Scripts\activate       # Ativar ambiente (Windows)
+pip install -r requirements.txt # Instalar dependências
+uvicorn main:app --reload     # Iniciar servidor
+# Backend rodando em http://localhost:8000
 ```
 
-### Deploy
+#### 3. Configurar o Frontend (Interface)
+(Em outro terminal)
 ```bash
-# Push para GitHub (auto-deploy Vercel/Render)
-git add -A && git commit -m "mensagem" && git push
+cd frontend
+npm install                   # Instalar dependências
+npm run dev                   # Iniciar servidor de desenvolvimento
+# Frontend rodando em http://localhost:5173
 ```
 
----
-
-## ⚠️ PROBLEMAS CONHECIDOS
-
-1. **Render Free Tier:** O backend "dorme" após 15min de inatividade. Primeiro request pode levar ~50s.
-2. **CORS:** Frontend DEVE usar URL de produção (`f-bay-eight.vercel.app`), não os links de preview.
-3. **PowerShell:** Comando `npm` pode falhar, usar `cmd /c npm ...` como workaround.
-
----
-
-## 📞 CONTATO
-
-**Desenvolvedor:** Fernando Evangelista
-**Email:** fernando.p.evangelista98@gmail.com
-**Repositório:** https://github.com/fernandopevangelista98-jpg/f
+### Deploy (Colocar no ar)
+O deploy é automatizado. Basta enviar as alterações para o GitHub:
+```bash
+git add -A
+git commit -m "Descrição das mudanças"
+git push
+```
+-   O **Vercel** detecta o push e atualiza o site automaticamente em ~1 minuto.
+-   O **Render** detecta o push e atualiza a API em ~3-5 minutos.
 
 ---
 
-*Documento gerado automaticamente em 19/01/2026.*
+## 6. ⚠️ RESOLUÇÃO DE PROBLEMAS COMUNS
+
+| Problema | Causa Provável | Solução |
+|----------|----------------|---------|
+| **Site não carrega dados ("Loading infinito")** | Backend no Render está "dormindo" (Free Tier). | Aguarde ~50 segundos para "acordar" o servidor. Tente recarregar. |
+| **Erro "Network Error"** | Frontend local tentando acessar Backend produtivo bloqueado por CORS (ou vice-versa), ou Backend offline. | Verifique se o Backend está rodando. Se for local, verifique a URL da API no `.env`. |
+| **Login falha (401 Unauthorized)** | Email/Senha incorretos ou usuário pendente. | Verifique credenciais. Se for novo usuário, peça ao Admin para aprovar. |
+| **Erro ao aprovar usuário (405 Method Not Allowed)** | Endpoint incorreto sendo chamado (PUT vs PATCH). | **Corrigido na Sprint 8.** Se persistir, limpe o cache do navegador. |
+
+---
+
+## 7. 📞 SUPORTE
+
+**Desenvolvedor Líder:** Fernando Evangelista  
+**Contato:** fernando.p.evangelista98@gmail.com  
+**Repositório Oficial:** [GitHub](https://github.com/fernandopevangelista98-jpg/f)
+
+---
+*Documento gerado para documentação oficial do projeto.*
