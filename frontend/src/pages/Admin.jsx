@@ -185,7 +185,7 @@ export default function Admin() {
                     {/* Main Content */}
                     <main className="flex-1">
                         {activeTab === 'dashboard' && (
-                            <DashboardTab stats={stats} users={users} pendingUsers={pendingUsers} temporadas={temporadas} />
+                            <DashboardTab stats={stats} users={users} pendingUsers={pendingUsers} temporadas={temporadas} setActiveTab={setActiveTab} />
                         )}
                         {activeTab === 'users' && (
                             <UsersTab
@@ -210,7 +210,7 @@ export default function Admin() {
 }
 
 // Dashboard Tab Component with Charts
-function DashboardTab({ stats, users, pendingUsers, temporadas }) {
+function DashboardTab({ stats, users, pendingUsers, temporadas, setActiveTab }) {
     const navigate = useNavigate();
 
     // Chart colors
