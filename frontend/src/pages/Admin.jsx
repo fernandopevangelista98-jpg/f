@@ -487,15 +487,18 @@ function DashboardTab({ stats, users, pendingUsers, temporadas, setActiveTab }) 
                 </div>
                 <StatCard
                     title="Armazenamento"
-                    value="450 MB"
+                    value={`${stats?.storage?.used_mb || 0} MB`}
                     icon="☁️"
                     color="yellow"
                     subtitle={
                         <div className="w-full bg-slate-700 rounded-full h-2 mt-2">
-                            <div className="bg-yellow-400 h-2 rounded-full" style={{ width: '45%' }}></div>
+                            <div
+                                className="bg-yellow-400 h-2 rounded-full"
+                                style={{ width: `${stats?.storage?.percent || 0}%` }}
+                            ></div>
                         </div>
                     }
-                    badge="45% de 1GB"
+                    badge={`${stats?.storage?.percent || 0}% de 1GB`}
                 />
             </div>
 
@@ -3615,8 +3618,8 @@ function LogsTab() {
                 <button
                     onClick={() => setActiveLogTab('atividades')}
                     className={`px-6 py-2 rounded-lg font-medium transition-all ${activeLogTab === 'atividades'
-                            ? 'bg-aec-pink text-white'
-                            : 'text-slate-400 hover:text-white'
+                        ? 'bg-aec-pink text-white'
+                        : 'text-slate-400 hover:text-white'
                         }`}
                 >
                     📋 Atividades
@@ -3624,8 +3627,8 @@ function LogsTab() {
                 <button
                     onClick={() => setActiveLogTab('erros')}
                     className={`px-6 py-2 rounded-lg font-medium transition-all ${activeLogTab === 'erros'
-                            ? 'bg-red-500 text-white'
-                            : 'text-slate-400 hover:text-white'
+                        ? 'bg-red-500 text-white'
+                        : 'text-slate-400 hover:text-white'
                         }`}
                 >
                     ⚠️ Erros

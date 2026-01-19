@@ -3,7 +3,7 @@ Rotas do Dashboard Admin
 """
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from typing import Optional
 from datetime import datetime, timedelta
 
@@ -25,6 +25,15 @@ async def get_dashboard_stats(
     """
     Obtém estatísticas gerais para o dashboard admin.
     """
+    # Armazenamento (PostgreSQL Size)
+    try:
+        db_name = db.bind.url.database
+        query_size = text("SELECT pg_database_size(:db_name)")
+        size_bytes = db.execute(query_size, {"db_name": db_name}).scalar()
+        size_mb = round(size_bytes / (1024 * 1024), 1)
+    except Exception:
+        size_mb = 0  # Fallback caso falhe permissão ou outro erro
+
     # Usuários
     total_usuarios = db.query(User).count()
     usuarios_ativos = db.query(User).filter(User.status == "ativo").count()
@@ -69,6 +78,11 @@ async def get_dashboard_stats(
             "tentativas": total_tentativas,
             "aprovadas": tentativas_aprovadas,
             "taxa_aprovacao": round(taxa_aprovacao, 1)
+        },
+        "storage": {
+            "used_mb": size_mb,
+            "total_mb": 1024,
+            "percent": round((size_mb / 1024) * 100, 1) if size_mb else 0
         }
     }
 
