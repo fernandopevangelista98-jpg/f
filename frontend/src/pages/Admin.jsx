@@ -304,6 +304,16 @@ export default function Admin() {
                                 <span>⚙️</span>
                                 <span className="font-medium">Configurações</span>
                             </button>
+                            <button
+                                onClick={() => setActiveTab('logs')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'logs'
+                                    ? 'bg-aec-pink/20 text-aec-pink border border-aec-pink/30'
+                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    }`}
+                            >
+                                <span>📋</span>
+                                <span className="font-medium">Logs</span>
+                            </button>
                             <div className="border-t border-slate-800 my-4"></div>
                             <button
                                 onClick={() => navigate('/temporadas')}
@@ -357,6 +367,9 @@ export default function Admin() {
                         )}
                         {activeTab === 'configuracoes' && (
                             <ConfiguracoesTab />
+                        )}
+                        {activeTab === 'logs' && (
+                            <LogsTab />
                         )}
                     </main>
                 </div>
@@ -3521,6 +3534,231 @@ function ConfiguracoesTab() {
                     </div>
                 </div>
             )}
+        </div>
+    );
+}
+
+// Logs Tab Component - Sprint 8
+function LogsTab() {
+    const [activeLogTab, setActiveLogTab] = useState('atividades');
+    const [filtroTipo, setFiltroTipo] = useState('todos');
+    const [filtroPeriodo, setFiltroPeriodo] = useState('7');
+
+    // Mock data for activity logs
+    const logsAtividades = [
+        { id: 1, tipo: 'login', usuario: 'Fernando Evangelista', acao: 'Login realizado', data: '19/01/2026 09:30:15', ip: '192.168.1.100', status: 'success' },
+        { id: 2, tipo: 'create', usuario: 'Fernando Evangelista', acao: 'Prova criada: "Prova Final Sprint 5"', data: '19/01/2026 09:25:42', ip: '192.168.1.100', status: 'success' },
+        { id: 3, tipo: 'update', usuario: 'Fernando Evangelista', acao: 'Temporada editada: "Temporada Zero"', data: '19/01/2026 09:20:18', ip: '192.168.1.100', status: 'success' },
+        { id: 4, tipo: 'delete', usuario: 'Fernando Evangelista', acao: 'Episódio excluído: "Ep. Teste"', data: '19/01/2026 08:55:33', ip: '192.168.1.100', status: 'warning' },
+        { id: 5, tipo: 'login', usuario: 'Admin', acao: 'Login realizado', data: '18/01/2026 23:45:10', ip: '10.0.0.1', status: 'success' },
+        { id: 6, tipo: 'create', usuario: 'Admin', acao: 'Usuário aprovado: "Maria Santos"', data: '18/01/2026 22:30:00', ip: '10.0.0.1', status: 'success' },
+        { id: 7, tipo: 'update', usuario: 'Admin', acao: 'Configurações alteradas', data: '18/01/2026 21:15:45', ip: '10.0.0.1', status: 'info' },
+        { id: 8, tipo: 'export', usuario: 'Fernando Evangelista', acao: 'Relatório exportado: CSV', data: '18/01/2026 20:00:12', ip: '192.168.1.100', status: 'success' },
+    ];
+
+    // Mock data for error logs
+    const logsErros = [
+        { id: 1, tipo: 'api', mensagem: 'Timeout na requisição /dashboard/stats', stack: 'AxiosError: timeout of 30000ms exceeded', data: '19/01/2026 07:45:22', resolvido: true },
+        { id: 2, tipo: 'render', mensagem: 'Cannot read property "nome" of undefined', stack: 'TypeError at UserCard.jsx:45', data: '18/01/2026 15:30:10', resolvido: true },
+        { id: 3, tipo: 'api', mensagem: '401 Unauthorized - Token expirado', stack: 'AxiosError: Request failed with status 401', data: '18/01/2026 12:20:55', resolvido: true },
+        { id: 4, tipo: 'network', mensagem: 'Failed to fetch - Backend offline', stack: 'TypeError: Failed to fetch at api.js:15', data: '17/01/2026 08:00:00', resolvido: false },
+    ];
+
+    const tiposAtividade = [
+        { value: 'todos', label: 'Todos' },
+        { value: 'login', label: 'Login' },
+        { value: 'create', label: 'Criação' },
+        { value: 'update', label: 'Edição' },
+        { value: 'delete', label: 'Exclusão' },
+        { value: 'export', label: 'Exportação' },
+    ];
+
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'success': return 'text-green-400';
+            case 'warning': return 'text-yellow-400';
+            case 'error': return 'text-red-400';
+            default: return 'text-blue-400';
+        }
+    };
+
+    const getTipoIcon = (tipo) => {
+        switch (tipo) {
+            case 'login': return '🔐';
+            case 'create': return '➕';
+            case 'update': return '✏️';
+            case 'delete': return '🗑️';
+            case 'export': return '📥';
+            case 'api': return '🌐';
+            case 'render': return '🖥️';
+            case 'network': return '📡';
+            default: return '📋';
+        }
+    };
+
+    const filteredLogs = logsAtividades.filter(log => {
+        if (filtroTipo !== 'todos' && log.tipo !== filtroTipo) return false;
+        return true;
+    });
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-white">Logs do Sistema</h2>
+                    <p className="text-slate-400 text-sm">Monitoramento de atividades e erros</p>
+                </div>
+            </div>
+
+            {/* Tab Navigation */}
+            <div className="flex gap-2 bg-slate-900/50 p-1 rounded-xl w-fit">
+                <button
+                    onClick={() => setActiveLogTab('atividades')}
+                    className={`px-6 py-2 rounded-lg font-medium transition-all ${activeLogTab === 'atividades'
+                            ? 'bg-aec-pink text-white'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                >
+                    📋 Atividades
+                </button>
+                <button
+                    onClick={() => setActiveLogTab('erros')}
+                    className={`px-6 py-2 rounded-lg font-medium transition-all ${activeLogTab === 'erros'
+                            ? 'bg-red-500 text-white'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                >
+                    ⚠️ Erros
+                    {logsErros.filter(e => !e.resolvido).length > 0 && (
+                        <span className="ml-2 bg-red-600 text-xs px-2 py-0.5 rounded-full">
+                            {logsErros.filter(e => !e.resolvido).length}
+                        </span>
+                    )}
+                </button>
+            </div>
+
+            {activeLogTab === 'atividades' && (
+                <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
+                    {/* Filters */}
+                    <div className="p-4 border-b border-slate-800 bg-slate-800/30 flex flex-wrap gap-4">
+                        <div>
+                            <label className="block text-xs text-slate-400 mb-1">Tipo</label>
+                            <select
+                                value={filtroTipo}
+                                onChange={(e) => setFiltroTipo(e.target.value)}
+                                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:border-aec-pink focus:outline-none"
+                            >
+                                {tiposAtividade.map(t => (
+                                    <option key={t.value} value={t.value}>{t.label}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-xs text-slate-400 mb-1">Período</label>
+                            <select
+                                value={filtroPeriodo}
+                                onChange={(e) => setFiltroPeriodo(e.target.value)}
+                                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm focus:border-aec-pink focus:outline-none"
+                            >
+                                <option value="1">Último dia</option>
+                                <option value="7">Últimos 7 dias</option>
+                                <option value="30">Últimos 30 dias</option>
+                                <option value="90">Últimos 3 meses</option>
+                            </select>
+                        </div>
+                        <div className="ml-auto flex items-end">
+                            <span className="text-sm text-slate-400">{filteredLogs.length} registros</span>
+                        </div>
+                    </div>
+
+                    {/* Activity Table */}
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="border-b border-slate-700 bg-slate-800/50">
+                                    <th className="p-3 text-slate-400 text-xs font-medium">Tipo</th>
+                                    <th className="p-3 text-slate-400 text-xs font-medium">Usuário</th>
+                                    <th className="p-3 text-slate-400 text-xs font-medium">Ação</th>
+                                    <th className="p-3 text-slate-400 text-xs font-medium">Data/Hora</th>
+                                    <th className="p-3 text-slate-400 text-xs font-medium">IP</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredLogs.map(log => (
+                                    <tr key={log.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
+                                        <td className="p-3">
+                                            <span className="text-xl" title={log.tipo}>{getTipoIcon(log.tipo)}</span>
+                                        </td>
+                                        <td className="p-3 text-white text-sm">{log.usuario}</td>
+                                        <td className="p-3">
+                                            <span className={`text-sm ${getStatusColor(log.status)}`}>{log.acao}</span>
+                                        </td>
+                                        <td className="p-3 text-slate-400 text-sm font-mono">{log.data}</td>
+                                        <td className="p-3 text-slate-500 text-xs font-mono">{log.ip}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {activeLogTab === 'erros' && (
+                <div className="space-y-4">
+                    {logsErros.map(erro => (
+                        <div
+                            key={erro.id}
+                            className={`bg-slate-900/85 backdrop-blur-xl border rounded-2xl p-4 ${erro.resolvido ? 'border-slate-800' : 'border-red-500/50'
+                                }`}
+                        >
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-start gap-3">
+                                    <span className="text-2xl">{getTipoIcon(erro.tipo)}</span>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`text-sm font-medium ${erro.resolvido ? 'text-slate-300' : 'text-red-400'}`}>
+                                                {erro.mensagem}
+                                            </span>
+                                            {erro.resolvido ? (
+                                                <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">Resolvido</span>
+                                            ) : (
+                                                <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">Pendente</span>
+                                            )}
+                                        </div>
+                                        <code className="text-xs text-slate-500 mt-1 block font-mono">{erro.stack}</code>
+                                        <span className="text-xs text-slate-600 mt-2 block">{erro.data}</span>
+                                    </div>
+                                </div>
+                                {!erro.resolvido && (
+                                    <button className="px-3 py-1 bg-green-600 hover:bg-green-500 text-white text-xs rounded-lg transition-colors">
+                                        Marcar Resolvido
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="bg-slate-900/85 border border-slate-800 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-white">{logsAtividades.length}</div>
+                    <div className="text-xs text-slate-400">Total Atividades</div>
+                </div>
+                <div className="bg-slate-900/85 border border-slate-800 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-green-400">{logsAtividades.filter(l => l.tipo === 'login').length}</div>
+                    <div className="text-xs text-slate-400">Logins</div>
+                </div>
+                <div className="bg-slate-900/85 border border-slate-800 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-red-400">{logsErros.filter(e => !e.resolvido).length}</div>
+                    <div className="text-xs text-slate-400">Erros Pendentes</div>
+                </div>
+                <div className="bg-slate-900/85 border border-slate-800 rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-blue-400">{logsErros.filter(e => e.resolvido).length}</div>
+                    <div className="text-xs text-slate-400">Erros Resolvidos</div>
+                </div>
+            </div>
         </div>
     );
 }
