@@ -81,8 +81,8 @@ async def get_dashboard_stats(
         },
         "storage": {
             "used_mb": size_mb,
-            "total_mb": 1024,
-            "percent": round((size_mb / 1024) * 100, 1) if size_mb else 0
+            "total_mb": 10240, # 10GB
+            "percent": round((size_mb / 10240) * 100, 2) if size_mb else 0
         }
     }
 

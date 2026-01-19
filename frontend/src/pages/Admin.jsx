@@ -498,7 +498,7 @@ function DashboardTab({ stats, users, pendingUsers, temporadas, setActiveTab }) 
                             ></div>
                         </div>
                     }
-                    badge={`${stats?.storage?.percent || 0}% de 1GB`}
+                    badge={`${stats?.storage?.percent || 0}% de 10GB`}
                 />
             </div>
 
