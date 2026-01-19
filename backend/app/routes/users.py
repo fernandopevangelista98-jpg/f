@@ -167,6 +167,66 @@ async def approve_user(
         background_tasks.add_task(send_rejection_email, user.nome_completo, user.email, data.motivo)
         return {"message": f"Usuário {user.nome_completo} recusado."}
 
+@router.patch("/{user_id}/approve")
+async def approve_user_patch(
+    user_id: UUID,
+    data: UserApprove,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """
+    Aprova ou recusa um usuário pendente (PATCH).
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    
+    if data.acao == "aprovar":
+        user.status = "ativo"
+        db.commit()
+        background_tasks.add_task(send_approval_email, user.nome_completo, user.email)
+        return {"message": f"Usuário {user.nome_completo} aprovado com sucesso!"}
+    
+    elif data.acao == "recusar":
+        user.status = "inativo"
+        db.commit()
+        background_tasks.add_task(send_rejection_email, user.nome_completo, user.email, data.motivo)
+        return {"message": f"Usuário {user.nome_completo} recusado."}
+
+@router.patch("/{user_id}/approve")
+async def approve_user_patch(
+    user_id: UUID,
+    data: UserApprove,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """
+    Aprova ou recusa um usuário pendente (PATCH).
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuário não encontrado"
+        )
+    
+    if data.acao == "aprovar":
+        user.status = "ativo"
+        db.commit()
+        background_tasks.add_task(send_approval_email, user.nome_completo, user.email)
+        return {"message": f"Usuário {user.nome_completo} aprovado com sucesso!"}
+    
+    elif data.acao == "recusar":
+        user.status = "inativo"
+        db.commit()
+        background_tasks.add_task(send_rejection_email, user.nome_completo, user.email, data.motivo)
+        return {"message": f"Usuário {user.nome_completo} recusado."}
+
 @router.delete("/{user_id}")
 async def delete_user(
     user_id: UUID,

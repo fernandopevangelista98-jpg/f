@@ -16,6 +16,33 @@ from app.utils.jwt import get_current_user, get_current_admin
 
 router = APIRouter()
 
+@router.get("", response_model=List[EpisodioOut])
+async def list_episodios(
+    temporada_id: Optional[UUID] = Query(None),
+    status_filter: Optional[str] = Query(None, alias="status"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Lista episódios, opcionalmente filtrados por temporada.
+    """
+    query = db.query(Episodio)
+    
+    if temporada_id:
+        query = query.filter(Episodio.temporada_id == temporada_id)
+    
+    # Usuário comum só vê publicados
+    if current_user.perfil != "admin":
+        query = query.filter(Episodio.status == "publicado")
+    elif status_filter:
+        query = query.filter(Episodio.status == status_filter)
+    
+    episodios = query.order_by(Episodio.ordem).all()
+    
+    return [EpisodioOut.model_validate(ep) for ep in episodios]
+
+
+
 @router.get("/{episodio_id}", response_model=EpisodioOut)
 async def get_episodio(
     episodio_id: UUID,
