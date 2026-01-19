@@ -311,6 +311,58 @@ async def create_prova(
     
     return ProvaOut.model_validate(prova)
 
+@router.put("/{prova_id}", response_model=ProvaOut)
+async def update_prova(
+    prova_id: UUID,
+    prova_data: ProvaUpdate,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """
+    Atualiza uma prova existente.
+    Apenas admins.
+    """
+    prova = db.query(Prova).filter(Prova.id == prova_id).first()
+    
+    if not prova:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prova não encontrada"
+        )
+    
+    update_data = prova_data.model_dump(exclude_unset=True)
+    
+    for field, value in update_data.items():
+        setattr(prova, field, value)
+    
+    db.commit()
+    db.refresh(prova)
+    
+    return ProvaOut.model_validate(prova)
+
+@router.delete("/perguntas/{pergunta_id}")
+async def delete_pergunta(
+    pergunta_id: UUID,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """
+    Deleta uma pergunta.
+    Apenas admins.
+    """
+    pergunta = db.query(Pergunta).filter(Pergunta.id == pergunta_id).first()
+    
+    if not pergunta:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Pergunta não encontrada"
+        )
+    
+    db.delete(pergunta)
+    db.commit()
+    
+    return {"message": "Pergunta deletada com sucesso"}
+
 @router.post("/{prova_id}/perguntas", response_model=PerguntaOut)
 async def add_pergunta(
     prova_id: UUID,

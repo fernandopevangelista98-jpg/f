@@ -47,6 +47,9 @@ class EpisodioCreate(BaseModel):
     descricao: Optional[str] = None
     ordem: int = Field(..., ge=0)
     status: str = "rascunho"
+    video_url: Optional[str] = None
+    audio_url: Optional[str] = None
+    transcricao: Optional[str] = None
 
 class EpisodioUpdate(BaseModel):
     """Schema para atualizar episódio"""
@@ -57,6 +60,7 @@ class EpisodioUpdate(BaseModel):
     status: Optional[str] = None
     temporada_id: Optional[UUID] = None  # Para mover de temporada
     video_url: Optional[str] = None
+    audio_url: Optional[str] = None
 
 class EpisodioOut(BaseModel):
     """Schema de saída de episódio"""

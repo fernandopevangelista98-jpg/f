@@ -66,7 +66,9 @@ async def create_episodio(
         descricao=episodio_data.descricao,
         ordem=episodio_data.ordem,
         status=episodio_data.status,
-        audio_url=""  # Será preenchido no upload
+        audio_url=episodio_data.audio_url,
+        video_url=episodio_data.video_url,
+        transcricao=episodio_data.transcricao
     )
     
     db.add(episodio)

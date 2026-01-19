@@ -142,6 +142,41 @@ export default function Admin() {
         }
     };
 
+    // --- Episode Handlers ---
+    const handleCreateEpisode = async (episodeData) => {
+        try {
+            await api.post('/episodios', episodeData);
+            // We don't refill everything here, the tab will handle its own refresh
+            return true;
+        } catch (error) {
+            console.error('Erro ao criar episódio:', error);
+            alert('Erro ao criar episódio');
+            return false;
+        }
+    };
+
+    const handleUpdateEpisode = async (episodeData) => {
+        try {
+            await api.put(`/episodios/${episodeData.id}`, episodeData);
+            return true;
+        } catch (error) {
+            console.error('Erro ao atualizar episódio:', error);
+            alert('Erro ao atualizar episódio');
+            return false;
+        }
+    };
+
+    const handleDeleteEpisode = async (episodeId) => {
+        try {
+            await api.delete(`/episodios/${episodeId}`);
+            return true;
+        } catch (error) {
+            console.error('Erro ao deletar episódio:', error);
+            alert('Erro ao deletar episódio');
+            return false;
+        }
+    };
+
     const handleLogout = () => {
         logout();
         navigate('/');
@@ -284,6 +319,14 @@ export default function Admin() {
                                 onUpdate={handleUpdateSeason}
                                 onDuplicate={handleDuplicateSeason}
                                 onDelete={handleDeleteSeason}
+                            />
+                        )}
+                        {activeTab === 'episodios' && (
+                            <EpisodiosTab
+                                temporadas={temporadas}
+                                onCreate={handleCreateEpisode}
+                                onUpdate={handleUpdateEpisode}
+                                onDelete={handleDeleteEpisode}
                             />
                         )}
                         {activeTab === 'provas' && (
@@ -1164,7 +1207,11 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showEditModal, setShowEditModal] = useState(false);
     const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showStatsModal, setShowStatsModal] = useState(false);
     const [selectedSeason, setSelectedSeason] = useState(null);
+    const [seasonStats, setSeasonStats] = useState(null);
+    const [loadingStats, setLoadingStats] = useState(false);
+
     const [formData, setFormData] = useState({
         nome: '',
         descricao: '',
@@ -1198,6 +1245,36 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
     const openDeleteModal = (season) => {
         setSelectedSeason(season);
         setShowDeleteModal(true);
+    };
+
+    const openStatsModal = async (season) => {
+        setSelectedSeason(season);
+        setLoadingStats(true);
+        setShowStatsModal(true);
+        try {
+            // Fetch detailed season data which includes episodes
+            // Note: The list view endpoint doesn't return episodes, so we need detailed view
+            const response = await api.get(`/temporadas/${season.id}`);
+            const detailedSeason = response.data;
+
+            // Calculate basic stats on client side for now
+            const totalEpisodios = detailedSeason.episodios ? detailedSeason.episodios.length : 0;
+            const publishedEpisodios = detailedSeason.episodios ? detailedSeason.episodios.filter(e => e.status === 'publicado').length : 0;
+            const totalDuration = detailedSeason.episodios ? detailedSeason.episodios.reduce((acc, curr) => acc + (curr.duracao || 0), 0) : 0;
+
+            setSeasonStats({
+                totalEpisodios,
+                publishedEpisodios,
+                totalDuration,
+                episodios: detailedSeason.episodios || []
+            });
+        } catch (error) {
+            console.error("Erro ao carregar estatísticas:", error);
+            alert("Erro ao carregar detalhes da temporada.");
+            setShowStatsModal(false);
+        } finally {
+            setLoadingStats(false);
+        }
     };
 
     const handleSubmitCreate = (e) => {
@@ -1244,14 +1321,21 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
                                     <div>
                                         <h3 className="font-bold text-white text-lg">{temp.nome}</h3>
                                         <div className={`text-xs px-2 py-0.5 rounded-full w-fit mt-1 ${temp.status === 'publicado'
-                                                ? 'bg-green-500/20 text-green-400 border border-green-500/20'
-                                                : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/20'
+                                            ? 'bg-green-500/20 text-green-400 border border-green-500/20'
+                                            : 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/20'
                                             }`}>
                                             {temp.status === 'publicado' ? 'Publicado' : 'Rascunho'}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="relative">
+                                <div className="relative flex items-center gap-1">
+                                    <button
+                                        onClick={() => openStatsModal(temp)}
+                                        className="p-2 text-slate-400 hover:text-aec-pink hover:bg-slate-800 rounded-lg transition-colors"
+                                        title="Estatísticas"
+                                    >
+                                        📊
+                                    </button>
                                     <button
                                         onClick={() => openEditModal(temp)}
                                         className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
@@ -1287,6 +1371,84 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
                             </div>
                         </div>
                     ))}
+                </div>
+            )}
+
+            {/* Modal Estatísticas (Sprint 3 + Sprint 6 Preview) */}
+            {showStatsModal && selectedSeason && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                                📊 Estatísticas da Temporada
+                            </h3>
+                            <button onClick={() => setShowStatsModal(false)} className="text-slate-400 hover:text-white">✕</button>
+                        </div>
+
+                        {loadingStats ? (
+                            <div className="py-12 flex justify-center">
+                                <div className="w-8 h-8 border-2 border-aec-pink border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        ) : seasonStats && (
+                            <div className="space-y-6">
+                                <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                                    <h4 className="text-aec-pink font-bold text-lg mb-1">{selectedSeason.nome}</h4>
+                                    <p className="text-sm text-slate-400">{selectedSeason.descricao}</p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-slate-800 p-4 rounded-xl text-center">
+                                        <div className="text-2xl font-bold text-white mb-1">{seasonStats.totalEpisodios}</div>
+                                        <div className="text-xs text-slate-400 uppercase tracking-wider">Episódios Totais</div>
+                                    </div>
+                                    <div className="bg-slate-800 p-4 rounded-xl text-center">
+                                        <div className="text-2xl font-bold text-green-400 mb-1">{seasonStats.publishedEpisodios}</div>
+                                        <div className="text-xs text-slate-400 uppercase tracking-wider">Publicados</div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h5 className="text-sm font-bold text-slate-300 mb-3 uppercase tracking-wider">Últimos Episódios</h5>
+                                    {seasonStats.episodios.length === 0 ? (
+                                        <p className="text-slate-500 text-sm italic">Nenhum episódio cadastrado.</p>
+                                    ) : (
+                                        <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                                            {seasonStats.episodios.slice(0, 5).map(ep => (
+                                                <div key={ep.id} className="flex justify-between items-center bg-slate-800/50 p-2 rounded-lg text-sm">
+                                                    <span className="text-slate-300 truncate max-w-[70%]">{ep.titulo}</span>
+                                                    <span className={`text-xs px-2 py-0.5 rounded ${ep.status === 'publicado' ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                                                        {ep.status}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {seasonStats.episodios.length > 5 && (
+                                                <p className="text-xs text-center text-slate-500 pt-1">
+                                                    + {seasonStats.episodios.length - 5} episódios...
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl flex items-start gap-3">
+                                    <span className="text-xl">ℹ️</span>
+                                    <div>
+                                        <p className="text-sm text-blue-200 font-medium">Analytics Avançado</p>
+                                        <p className="text-xs text-blue-300/70 mt-1">
+                                            Visualizações, retenção e taxas de conclusão detalhadas estarão disponíveis na <strong>Sprint 6 (Analytics)</strong>.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => setShowStatsModal(false)}
+                                    className="w-full py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -1507,13 +1669,354 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
     );
 }
 
+// Episodios Tab Component - Sprint 4
+function EpisodiosTab({ temporadas, onCreate, onUpdate, onDelete }) {
+    const [selectedSeasonId, setSelectedSeasonId] = useState('');
+    const [episodes, setEpisodes] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [selectedEpisode, setSelectedEpisode] = useState(null);
+    const [formData, setFormData] = useState({
+        titulo: '',
+        descricao: '',
+        ordem: 1,
+        status: 'rascunho',
+        video_url: '',
+        audio_url: '',
+        transcricao: ''
+    });
+
+    useEffect(() => {
+        if (temporadas.length > 0 && !selectedSeasonId) {
+            setSelectedSeasonId(temporadas[0].id);
+        }
+    }, [temporadas]);
+
+    useEffect(() => {
+        if (selectedSeasonId) {
+            fetchEpisodes();
+        }
+    }, [selectedSeasonId]);
+
+    const fetchEpisodes = async () => {
+        setLoading(true);
+        try {
+            const response = await api.get(`/temporadas/${selectedSeasonId}`);
+            setEpisodes(response.data.episodios || []);
+        } catch (error) {
+            console.error('Erro ao buscar episódios:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const openCreateModal = () => {
+        setFormData({
+            titulo: '',
+            descricao: '',
+            ordem: episodes.length + 1,
+            status: 'rascunho',
+            video_url: '',
+            audio_url: '',
+            transcricao: ''
+        });
+        setSelectedEpisode(null);
+        setShowModal(true);
+    };
+
+    const openEditModal = (ep) => {
+        setSelectedEpisode(ep);
+        setFormData({
+            titulo: ep.titulo,
+            descricao: ep.descricao || '',
+            ordem: ep.ordem,
+            status: ep.status,
+            video_url: ep.video_url || '',
+            transcricao: ep.transcricao || ''
+        });
+        setShowModal(true);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const data = {
+            ...formData,
+            temporada_id: selectedSeasonId
+        };
+
+        let success = false;
+        if (selectedEpisode) {
+            success = await onUpdate({ ...data, id: selectedEpisode.id });
+        } else {
+            success = await onCreate(data);
+        }
+
+        if (success) {
+            setShowModal(false);
+            fetchEpisodes();
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!selectedEpisode) return;
+        const success = await onDelete(selectedEpisode.id);
+        if (success) {
+            setShowDeleteModal(false);
+            fetchEpisodes();
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-white">Episódios</h2>
+                    <p className="text-slate-400 text-sm">Gerencie o conteúdo do podcast</p>
+                </div>
+                <div className="flex gap-3">
+                    <select
+                        value={selectedSeasonId}
+                        onChange={(e) => setSelectedSeasonId(e.target.value)}
+                        className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                    >
+                        {temporadas.map(t => (
+                            <option key={t.id} value={t.id}>{t.nome}</option>
+                        ))}
+                    </select>
+                    <button
+                        onClick={openCreateModal}
+                        className="px-4 py-2 bg-aec-pink text-white rounded-xl hover:bg-aec-pinkDark transition-colors font-medium"
+                    >
+                        + Novo Episódio
+                    </button>
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="py-12 flex justify-center">
+                    <div className="w-8 h-8 border-2 border-aec-pink border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            ) : episodes.length === 0 ? (
+                <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-12 text-center">
+                    <span className="text-5xl mb-4 block">🎬</span>
+                    <p className="text-slate-400">Nenhum episódio encontrado nesta temporada</p>
+                </div>
+            ) : (
+                <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="border-b border-slate-800 bg-slate-800/50">
+                                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider w-16 text-center">#</th>
+                                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">Título</th>
+                                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider w-32">Status</th>
+                                    <th className="p-4 text-xs font-semibold text-slate-400 uppercase tracking-wider w-32 text-right">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-800">
+                                {episodes.map(ep => (
+                                    <tr key={ep.id} className="hover:bg-slate-800/30 transition-colors group">
+                                        <td className="p-4 text-slate-400 font-mono text-center">{ep.ordem}</td>
+                                        <td className="p-4">
+                                            <div className="font-medium text-slate-200">{ep.titulo}</div>
+                                            <div className="text-xs text-slate-500 truncate max-w-md">{ep.descricao || 'Sem descrição'}</div>
+                                        </td>
+                                        <td className="p-4">
+                                            <span className={`text-xs px-2 py-1 rounded-full border ${ep.status === 'publicado'
+                                                ? 'bg-green-500/10 text-green-400 border-green-500/20'
+                                                : 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20'
+                                                }`}>
+                                                {ep.status === 'publicado' ? 'Publicado' : 'Rascunho'}
+                                            </span>
+                                        </td>
+                                        <td className="p-4 text-right">
+                                            <div className="flex justify-end gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    onClick={() => openEditModal(ep)}
+                                                    className="p-1 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                                                    title="Editar"
+                                                >
+                                                    ✏️
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedEpisode(ep);
+                                                        setShowDeleteModal(true);
+                                                    }}
+                                                    className="p-1 hover:text-red-400 hover:bg-slate-700 rounded transition-colors"
+                                                    title="Excluir"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Create/Edit Episode */}
+            {showModal && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <h3 className="text-xl font-bold text-white mb-6">
+                            {selectedEpisode ? 'Editar Episódio' : 'Novo Episódio'}
+                        </h3>
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="grid grid-cols-6 gap-4">
+                                <div className="col-span-1">
+                                    <label className="block text-sm text-slate-400 mb-2">Ordem</label>
+                                    <input
+                                        type="number"
+                                        value={formData.ordem}
+                                        onChange={(e) => setFormData({ ...formData, ordem: parseInt(e.target.value) })}
+                                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                        required
+                                    />
+                                </div>
+                                <div className="col-span-5">
+                                    <label className="block text-sm text-slate-400 mb-2">Título</label>
+                                    <input
+                                        type="text"
+                                        value={formData.titulo}
+                                        onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Descrição</label>
+                                <textarea
+                                    value={formData.descricao}
+                                    onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none resize-none"
+                                    rows={2}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-2">URL do Vídeo (Embed/MP4)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.video_url}
+                                        onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                        placeholder="https://..."
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-2">URL do Áudio (MP3)</label>
+                                    <input
+                                        type="text"
+                                        value={formData.audio_url || ''}
+                                        onChange={(e) => setFormData({ ...formData, audio_url: e.target.value })}
+                                        className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                        placeholder="https://... (Opcional)"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Transcrição / Conteúdo</label>
+                                <textarea
+                                    value={formData.transcricao}
+                                    onChange={(e) => setFormData({ ...formData, transcricao: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none resize-none font-mono text-sm"
+                                    rows={5}
+                                    placeholder="Texto completo ou resumo..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Status</label>
+                                <div className="flex bg-slate-800 p-1 rounded-xl w-fit">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, status: 'rascunho' })}
+                                        className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'rascunho' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        Rascunho
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({ ...formData, status: 'publicado' })}
+                                        className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'publicado' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                    >
+                                        Publicado
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-4 border-t border-slate-800 mt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowModal(false)}
+                                    className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-3 bg-aec-pink text-white rounded-xl hover:bg-aec-pinkDark transition-colors font-medium"
+                                >
+                                    {selectedEpisode ? 'Salvar Alterações' : 'Criar Episódio'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Delete Episode */}
+            {showDeleteModal && selectedEpisode && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md text-center">
+                        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                            🗑️
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">Excluir Episódio?</h3>
+                        <p className="text-slate-400 mb-6">
+                            Você está prestes a excluir <strong>{selectedEpisode.titulo}</strong>.
+                            Esta ação não pode ser desfeita.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                className="flex-1 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium"
+                            >
+                                Sim, Excluir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // Provas Tab Component
 function ProvasTab() {
     const [provas, setProvas] = useState([]);
     const [temporadas, setTemporadas] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showPerguntaModal, setShowPerguntaModal] = useState(false);
+    const [showQuestionsList, setShowQuestionsList] = useState(false); // New state for Questions List View
     const [selectedProva, setSelectedProva] = useState(null);
     const [formData, setFormData] = useState({
         temporada_id: '',
@@ -1524,6 +2027,9 @@ function ProvasTab() {
         tempo_limite: null,
         mostrar_respostas: true
     });
+
+    // State for managing questions
+    const [perguntas, setPerguntas] = useState([]);
     const [perguntaForm, setPerguntaForm] = useState({
         enunciado: '',
         ordem: 1,
@@ -1556,26 +2062,97 @@ function ProvasTab() {
         }
     };
 
-    const handleCreateProva = async (e) => {
+    const fetchPerguntas = async (provaId) => {
+        try {
+            const res = await api.get(`/provas/${provaId}`);
+            if (res.data && res.data.perguntas) {
+                setPerguntas(res.data.perguntas);
+            } else {
+                setPerguntas([]);
+            }
+        } catch (error) {
+            console.error('Erro ao buscar perguntas:', error);
+            setPerguntas([]);
+        }
+    };
+
+    const openCreateModal = () => {
+        setFormData({
+            temporada_id: temporadas.length > 0 ? temporadas[0].id : '',
+            titulo: '',
+            descricao: '',
+            tentativas_permitidas: 3,
+            nota_minima_aprovacao: 70,
+            tempo_limite: null,
+            mostrar_respostas: true
+        });
+        setSelectedProva(null);
+        setShowModal(true);
+    };
+
+    const openEditModal = (prova) => {
+        setSelectedProva(prova);
+        setFormData({
+            temporada_id: prova.temporada_id,
+            titulo: prova.titulo,
+            descricao: prova.descricao || '',
+            tentativas_permitidas: prova.tentativas_permitidas,
+            nota_minima_aprovacao: prova.nota_minima_aprovacao,
+            tempo_limite: prova.tempo_limite,
+            mostrar_respostas: prova.mostrar_respostas
+        });
+        setShowModal(true);
+    };
+
+    const openQuestionsManager = async (prova) => {
+        setSelectedProva(prova);
+        await fetchPerguntas(prova.id);
+        setShowQuestionsList(true);
+    };
+
+    const openAddQuestionModal = () => {
+        setPerguntaForm({
+            enunciado: '',
+            ordem: perguntas.length + 1,
+            peso: 1,
+            opcoes: [
+                { texto: '', correta: true, ordem: 'A' },
+                { texto: '', correta: false, ordem: 'B' },
+                { texto: '', correta: false, ordem: 'C' },
+                { texto: '', correta: false, ordem: 'D' }
+            ]
+        });
+        setShowPerguntaModal(true);
+    };
+
+    const handleSubmitProva = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/provas', {
+            const payload = {
                 ...formData,
                 tempo_limite: formData.tempo_limite || null
-            });
+            };
+
+            if (selectedProva) {
+                await api.put(`/provas/${selectedProva.id}`, payload);
+            } else {
+                await api.post('/provas', payload);
+            }
             setShowModal(false);
-            setFormData({
-                temporada_id: '',
-                titulo: '',
-                descricao: '',
-                tentativas_permitidas: 3,
-                nota_minima_aprovacao: 70,
-                tempo_limite: null,
-                mostrar_respostas: true
-            });
             fetchData();
         } catch (error) {
-            alert(error.response?.data?.detail || 'Erro ao criar prova');
+            alert(error.response?.data?.detail || 'Erro ao salvar prova');
+        }
+    };
+
+    const handleDeleteProva = async () => {
+        if (!selectedProva) return;
+        try {
+            await api.delete(`/provas/${selectedProva.id}`);
+            setShowDeleteModal(false);
+            fetchData();
+        } catch (error) {
+            alert(error.response?.data?.detail || 'Erro ao excluir prova');
         }
     };
 
@@ -1583,7 +2160,6 @@ function ProvasTab() {
         e.preventDefault();
         if (!selectedProva) return;
 
-        // Garantir que apenas uma opção está marcada como correta
         const hasCorrect = perguntaForm.opcoes.some(o => o.correta);
         if (!hasCorrect) {
             alert('Marque uma opção como correta!');
@@ -1593,41 +2169,29 @@ function ProvasTab() {
         try {
             await api.post(`/provas/${selectedProva.id}/perguntas`, perguntaForm);
             setShowPerguntaModal(false);
-            setPerguntaForm({
-                enunciado: '',
-                ordem: perguntaForm.ordem + 1,
-                peso: 1,
-                opcoes: [
-                    { texto: '', correta: true, ordem: 'A' },
-                    { texto: '', correta: false, ordem: 'B' },
-                    { texto: '', correta: false, ordem: 'C' },
-                    { texto: '', correta: false, ordem: 'D' }
-                ]
-            });
-            fetchData();
+            fetchPerguntas(selectedProva.id); // Refresh questions list
+            fetchData(); // Refresh main list stats if needed
             alert('Pergunta adicionada com sucesso!');
         } catch (error) {
             alert(error.response?.data?.detail || 'Erro ao adicionar pergunta');
         }
     };
 
-    const handleDeleteProva = async (provaId) => {
-        if (!confirm('Tem certeza que deseja excluir esta prova?')) return;
+    const handleDeletePergunta = async (perguntaId) => {
+        if (!confirm('Excluir esta pergunta?')) return;
         try {
-            await api.delete(`/provas/${provaId}`);
-            fetchData();
+            await api.delete(`/provas/perguntas/${perguntaId}`);
+            fetchPerguntas(selectedProva.id);
         } catch (error) {
-            alert(error.response?.data?.detail || 'Erro ao excluir prova');
+            console.error('Erro ao deletar pergunta', error);
+            alert('Erro ao excluir pergunta. Verifique conexao.');
         }
     };
 
     const handleOpcaoChange = (index, field, value) => {
         const newOpcoes = [...perguntaForm.opcoes];
         if (field === 'correta' && value) {
-            // Desmarcar todas as outras
-            newOpcoes.forEach((o, i) => {
-                o.correta = i === index;
-            });
+            newOpcoes.forEach((o, i) => o.correta = i === index);
         } else {
             newOpcoes[index][field] = value;
         }
@@ -1645,9 +2209,12 @@ function ProvasTab() {
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white">Provas</h2>
+                <div>
+                    <h2 className="text-2xl font-bold text-white">Provas</h2>
+                    <p className="text-slate-400 text-sm">Gerencie avaliações e certificações</p>
+                </div>
                 <button
-                    onClick={() => setShowModal(true)}
+                    onClick={openCreateModal}
                     className="px-4 py-2 bg-aec-pink text-white rounded-xl hover:bg-aec-pinkDark transition-colors font-medium"
                 >
                     + Nova Prova
@@ -1658,50 +2225,64 @@ function ProvasTab() {
                 <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-12 text-center">
                     <span className="text-5xl mb-4 block">📝</span>
                     <p className="text-slate-400">Nenhuma prova cadastrada</p>
-                    <p className="text-sm text-slate-500 mt-2">Crie sua primeira prova clicando no botão acima</p>
+                    <button onClick={openCreateModal} className="text-aec-pink hover:underline mt-2">
+                        Criar primeira prova
+                    </button>
                 </div>
             ) : (
                 <div className="grid gap-4">
                     {provas.map(prova => (
-                        <div key={prova.id} className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
+                        <div key={prova.id} className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 group hover:border-slate-600 transition-all">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center text-2xl text-white">
-                                        📝
+                                    <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-2xl text-white shadow-lg shadow-indigo-500/20">
+                                        🎓
                                     </div>
                                     <div>
                                         <h3 className="font-bold text-white text-lg">{prova.titulo}</h3>
-                                        <p className="text-sm text-slate-400">{prova.descricao || 'Sem descrição'}</p>
+                                        <div className="flex items-center gap-2 text-sm text-slate-400">
+                                            <span>
+                                                {temporadas.find(t => t.id === prova.temporada_id)?.nome || 'Temporada desconhecida'}
+                                            </span>
+                                            <span>•</span>
+                                            <span>{prova.total_perguntas || 0} questões</span>
+                                        </div>
                                         <div className="flex gap-3 mt-2">
-                                            <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-300">
-                                                {prova.tentativas_permitidas} tentativas
+                                            <span className="text-xs bg-slate-800 border border-slate-700 px-2 py-0.5 rounded text-slate-300">
+                                                Tentativas: {prova.tentativas_permitidas}
                                             </span>
-                                            <span className="text-xs bg-green-500/20 px-2 py-1 rounded text-green-400">
-                                                Nota mínima: {prova.nota_minima_aprovacao}%
+                                            <span className={`text-xs px-2 py-0.5 rounded border ${prova.nota_minima_aprovacao >= 70
+                                                    ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                                                    : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                                                }`}>
+                                                Min: {prova.nota_minima_aprovacao}%
                                             </span>
-                                            {prova.tempo_limite && (
-                                                <span className="text-xs bg-yellow-500/20 px-2 py-1 rounded text-yellow-400">
-                                                    ⏱️ {prova.tempo_limite} min
-                                                </span>
-                                            )}
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                                    <button
+                                        onClick={() => openQuestionsManager(prova)}
+                                        className="px-4 py-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl hover:bg-indigo-500/20 transition-colors flex items-center gap-2"
+                                    >
+                                        <span>❓</span> Questões
+                                    </button>
+                                    <button
+                                        onClick={() => openEditModal(prova)}
+                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
+                                        title="Editar Configurações"
+                                    >
+                                        ✏️
+                                    </button>
                                     <button
                                         onClick={() => {
                                             setSelectedProva(prova);
-                                            setShowPerguntaModal(true);
+                                            setShowDeleteModal(true);
                                         }}
-                                        className="px-4 py-2 bg-green-500/20 text-green-400 rounded-xl hover:bg-green-500/30 transition-colors"
+                                        className="p-2 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-xl transition-colors"
+                                        title="Excluir Prova"
                                     >
-                                        + Pergunta
-                                    </button>
-                                    <button
-                                        onClick={() => handleDeleteProva(prova.id)}
-                                        className="px-4 py-2 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors"
-                                    >
-                                        Excluir
+                                        🗑️
                                     </button>
                                 </div>
                             </div>
@@ -1710,23 +2291,105 @@ function ProvasTab() {
                 </div>
             )}
 
-            {/* Modal Criar Prova */}
+            {/* Modal Questions Manager */}
+            {showQuestionsList && selectedProva && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+                        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-800/50">
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Gerenciar Questões</h3>
+                                <p className="text-sm text-slate-400">{selectedProva.titulo}</p>
+                            </div>
+                            <button
+                                onClick={() => setShowQuestionsList(false)}
+                                className="text-slate-400 hover:text-white"
+                            >
+                                ✕
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h4 className="text-lg font-semibold text-slate-200">
+                                    Total: {perguntas.length} questões
+                                </h4>
+                                <button
+                                    onClick={openAddQuestionModal}
+                                    className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-xl transition-colors font-medium flex items-center gap-2"
+                                >
+                                    + Adicionar Questão
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {perguntas.map((p, idx) => (
+                                    <div key={p.id} className="bg-slate-800/50 border border-slate-700/50 p-4 rounded-xl">
+                                        <div className="flex justify-between gap-4">
+                                            <div className="flex gap-4 flex-1">
+                                                <div className="flex flex-col items-center justify-center bg-slate-800 w-12 h-12 rounded-lg border border-slate-700 shrink-0">
+                                                    <span className="text-xs text-slate-500">#{p.ordem}</span>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="text-slate-200 font-medium whitespace-pre-wrap">{p.enunciado}</p>
+                                                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                        {p.opcoes?.map((opt) => (
+                                                            <div key={opt.id} className={`text-sm p-2 rounded border ${
+                                                                // Correct answer logic would need 'correta' field visible from backend
+                                                                // Assuming we might not have it in simple list unless we request it
+                                                                // For now verify visualization
+                                                                'bg-slate-900/50 border-slate-700 text-slate-400'
+                                                                }`}>
+                                                                <span className="font-bold mr-2">{opt.ordem})</span>
+                                                                {opt.texto}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <button
+                                                    onClick={() => handleDeletePergunta(p.id)}
+                                                    className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                    title="Excluir questão"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {perguntas.length === 0 && (
+                                    <div className="text-center py-12 text-slate-500 border-2 border-dashed border-slate-800 rounded-xl">
+                                        Nenhuma questão cadastrada nesta prova.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Create/Edit Prova */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-                        <h3 className="text-xl font-bold text-white mb-6">Nova Prova</h3>
-                        <form onSubmit={handleCreateProva} className="space-y-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <h3 className="text-xl font-bold text-white mb-6">
+                            {selectedProva ? 'Editar Prova' : 'Nova Prova'}
+                        </h3>
+                        <form onSubmit={handleSubmitProva} className="space-y-4">
                             <div>
-                                <label className="block text-sm text-slate-400 mb-2">Temporada *</label>
+                                <label className="block text-sm text-slate-400 mb-2">Temporada Vinculada *</label>
                                 <select
                                     value={formData.temporada_id}
                                     onChange={(e) => setFormData({ ...formData, temporada_id: e.target.value })}
                                     className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
                                     required
+                                    disabled={!!selectedProva} // Disable changing season on edit to simplify logic
                                 >
                                     <option value="">Selecione...</option>
                                     {temporadas.map(t => (
-                                        <option key={t.id} value={t.id}>{t.titulo}</option>
+                                        <option key={t.id} value={t.id}>{t.nome}</option>
                                     ))}
                                 </select>
                             </div>
@@ -1737,18 +2400,17 @@ function ProvasTab() {
                                     value={formData.titulo}
                                     onChange={(e) => setFormData({ ...formData, titulo: e.target.value })}
                                     className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
-                                    placeholder="Ex: Prova Final - Temporada 1"
+                                    placeholder="Ex: Avaliação Final"
                                     required
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm text-slate-400 mb-2">Descrição</label>
+                                <label className="block text-sm text-slate-400 mb-2">Instruções / Descrição</label>
                                 <textarea
                                     value={formData.descricao}
                                     onChange={(e) => setFormData({ ...formData, descricao: e.target.value })}
                                     className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none resize-none"
                                     rows={3}
-                                    placeholder="Descrição opcional..."
                                 />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
@@ -1775,7 +2437,7 @@ function ProvasTab() {
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm text-slate-400 mb-2">Tempo Limite (minutos)</label>
+                                <label className="block text-sm text-slate-400 mb-2">Tempo Limite (minutos - opcional)</label>
                                 <input
                                     type="number"
                                     value={formData.tempo_limite || ''}
@@ -1793,11 +2455,11 @@ function ProvasTab() {
                                     onChange={(e) => setFormData({ ...formData, mostrar_respostas: e.target.checked })}
                                     className="w-5 h-5 rounded border-slate-700 bg-slate-800 text-aec-pink focus:ring-aec-pink"
                                 />
-                                <label htmlFor="mostrar_respostas" className="text-slate-300">
-                                    Mostrar respostas após envio
+                                <label htmlFor="mostrar_respostas" className="text-slate-300 select-none cursor-pointer">
+                                    Mostrar respostas/feedback após envio
                                 </label>
                             </div>
-                            <div className="flex gap-3 pt-4">
+                            <div className="flex gap-3 pt-4 border-t border-slate-800 mt-2">
                                 <button
                                     type="button"
                                     onClick={() => setShowModal(false)}
@@ -1809,7 +2471,7 @@ function ProvasTab() {
                                     type="submit"
                                     className="flex-1 py-3 bg-aec-pink text-white rounded-xl hover:bg-aec-pinkDark transition-colors font-medium"
                                 >
-                                    Criar Prova
+                                    {selectedProva ? 'Salvar Alterações' : 'Criar Prova'}
                                 </button>
                             </div>
                         </form>
@@ -1817,12 +2479,12 @@ function ProvasTab() {
                 </div>
             )}
 
-            {/* Modal Adicionar Pergunta */}
-            {showPerguntaModal && selectedProva && (
-                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-                        <h3 className="text-xl font-bold text-white mb-2">Nova Pergunta</h3>
-                        <p className="text-slate-400 text-sm mb-6">Prova: {selectedProva.titulo}</p>
+            {/* Modal Adicionar Pergunta (Nested inside Questions Manager usually, but keeping global for z-index simplicity) */}
+            {showPerguntaModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <h3 className="text-xl font-bold text-white mb-2">Nova Questão</h3>
+                        <p className="text-slate-400 text-sm mb-6">Para: {selectedProva?.titulo}</p>
                         <form onSubmit={handleAddPergunta} className="space-y-4">
                             <div>
                                 <label className="block text-sm text-slate-400 mb-2">Enunciado *</label>
@@ -1847,7 +2509,7 @@ function ProvasTab() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-sm text-slate-400 mb-2">Peso</label>
+                                    <label className="block text-sm text-slate-400 mb-2">Peso (Pontos)</label>
                                     <input
                                         type="number"
                                         value={perguntaForm.peso}
@@ -1857,12 +2519,16 @@ function ProvasTab() {
                                     />
                                 </div>
                             </div>
+
                             <div>
                                 <label className="block text-sm text-slate-400 mb-3">Opções de Resposta *</label>
                                 <div className="space-y-3">
                                     {perguntaForm.opcoes.map((opcao, index) => (
                                         <div key={index} className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 flex items-center justify-center rounded-lg font-bold ${opcao.correta ? 'bg-green-500 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                                            <div className={`w-10 h-10 flex items-center justify-center rounded-lg font-bold border ${opcao.correta
+                                                    ? 'bg-green-600 text-white border-green-500'
+                                                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                                                }`}>
                                                 {opcao.ordem}
                                             </div>
                                             <input
@@ -1876,15 +2542,19 @@ function ProvasTab() {
                                             <button
                                                 type="button"
                                                 onClick={() => handleOpcaoChange(index, 'correta', true)}
-                                                className={`px-4 py-3 rounded-xl transition-colors ${opcao.correta ? 'bg-green-500 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'}`}
+                                                className={`px-4 py-3 rounded-xl transition-colors whitespace-nowrap text-sm font-medium ${opcao.correta
+                                                        ? 'bg-green-600 text-white shadow-lg shadow-green-900/50'
+                                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                                    }`}
                                             >
-                                                {opcao.correta ? '✓ Correta' : 'Marcar'}
+                                                {opcao.correta ? 'Resposta Correta' : 'Marcar Correta'}
                                             </button>
                                         </div>
                                     ))}
                                 </div>
                             </div>
-                            <div className="flex gap-3 pt-4">
+
+                            <div className="flex gap-3 pt-4 border-t border-slate-800 mt-2">
                                 <button
                                     type="button"
                                     onClick={() => setShowPerguntaModal(false)}
@@ -1894,12 +2564,42 @@ function ProvasTab() {
                                 </button>
                                 <button
                                     type="submit"
-                                    className="flex-1 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 transition-colors font-medium"
+                                    className="flex-1 py-3 bg-green-600 hover:bg-green-500 text-white rounded-xl transition-colors font-medium"
                                 >
-                                    Adicionar Pergunta
+                                    Salvar Questão
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal Delete Confirmation for Prova */}
+            {showDeleteModal && selectedProva && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md text-center">
+                        <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                            🗑️
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">Excluir Prova?</h3>
+                        <p className="text-slate-400 mb-6">
+                            Você está prestes a excluir <strong>{selectedProva.titulo}</strong>.
+                            Isso apagará todas as questões vinculadas. Ação irreversível.
+                        </p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setShowDeleteModal(false)}
+                                className="flex-1 py-3 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={handleDeleteProva}
+                                className="flex-1 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium"
+                            >
+                                Sim, Excluir
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
