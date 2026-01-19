@@ -108,7 +108,7 @@ export default function Admin() {
             fetchData();
         } catch (error) {
             console.error('Erro ao criar temporada:', error);
-            alert('Erro ao criar temporada');
+            alert(`Erro ao criar temporada: ${error.response?.data?.detail || error.message}`);
         }
     };
 
@@ -118,7 +118,7 @@ export default function Admin() {
             fetchData();
         } catch (error) {
             console.error('Erro ao atualizar temporada:', error);
-            alert('Erro ao atualizar temporada');
+            alert(`Erro ao atualizar temporada: ${error.response?.data?.detail || error.message}`);
         }
     };
 
@@ -128,7 +128,7 @@ export default function Admin() {
             fetchData();
         } catch (error) {
             console.error('Erro ao duplicar temporada:', error);
-            alert('Erro ao duplicar temporada');
+            alert(`Erro ao duplicar temporada: ${error.response?.data?.detail || error.message}`);
         }
     };
 
@@ -138,7 +138,7 @@ export default function Admin() {
             fetchData();
         } catch (error) {
             console.error('Erro ao deletar temporada:', error);
-            alert('Erro ao deletar temporada');
+            alert(`Erro ao deletar temporada: ${error.response?.data?.detail || error.message}`);
         }
     };
 
@@ -1321,7 +1321,9 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
 
     const handleSubmitCreate = (e) => {
         e.preventDefault();
-        onCreate(formData);
+        // Remove capa_url pois a API de criação não suporta ainda
+        const { capa_url, ...payload } = formData;
+        onCreate(payload);
         setShowCreateModal(false);
     };
 
