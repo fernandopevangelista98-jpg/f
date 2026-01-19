@@ -284,6 +284,16 @@ export default function Admin() {
                                 <span>📝</span>
                                 <span className="font-medium">Provas</span>
                             </button>
+                            <button
+                                onClick={() => setActiveTab('relatorios')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'relatorios'
+                                    ? 'bg-aec-pink/20 text-aec-pink border border-aec-pink/30'
+                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    }`}
+                            >
+                                <span>📊</span>
+                                <span className="font-medium">Relatórios</span>
+                            </button>
                             <div className="border-t border-slate-800 my-4"></div>
                             <button
                                 onClick={() => navigate('/temporadas')}
@@ -331,6 +341,9 @@ export default function Admin() {
                         )}
                         {activeTab === 'provas' && (
                             <ProvasTab />
+                        )}
+                        {activeTab === 'relatorios' && (
+                            <RelatoriosTab />
                         )}
                     </main>
                 </div>
@@ -2252,8 +2265,8 @@ function ProvasTab() {
                                                 Tentativas: {prova.tentativas_permitidas}
                                             </span>
                                             <span className={`text-xs px-2 py-0.5 rounded border ${prova.nota_minima_aprovacao >= 70
-                                                    ? 'bg-green-500/10 border-green-500/20 text-green-400'
-                                                    : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+                                                ? 'bg-green-500/10 border-green-500/20 text-green-400'
+                                                : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
                                                 }`}>
                                                 Min: {prova.nota_minima_aprovacao}%
                                             </span>
@@ -2526,8 +2539,8 @@ function ProvasTab() {
                                     {perguntaForm.opcoes.map((opcao, index) => (
                                         <div key={index} className="flex items-center gap-3">
                                             <div className={`w-10 h-10 flex items-center justify-center rounded-lg font-bold border ${opcao.correta
-                                                    ? 'bg-green-600 text-white border-green-500'
-                                                    : 'bg-slate-800 text-slate-400 border-slate-700'
+                                                ? 'bg-green-600 text-white border-green-500'
+                                                : 'bg-slate-800 text-slate-400 border-slate-700'
                                                 }`}>
                                                 {opcao.ordem}
                                             </div>
@@ -2543,8 +2556,8 @@ function ProvasTab() {
                                                 type="button"
                                                 onClick={() => handleOpcaoChange(index, 'correta', true)}
                                                 className={`px-4 py-3 rounded-xl transition-colors whitespace-nowrap text-sm font-medium ${opcao.correta
-                                                        ? 'bg-green-600 text-white shadow-lg shadow-green-900/50'
-                                                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
+                                                    ? 'bg-green-600 text-white shadow-lg shadow-green-900/50'
+                                                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700 border border-slate-700'
                                                     }`}
                                             >
                                                 {opcao.correta ? 'Resposta Correta' : 'Marcar Correta'}
@@ -2600,6 +2613,494 @@ function ProvasTab() {
                                 Sim, Excluir
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// Relatorios Tab Component - Sprint 6
+function RelatoriosTab() {
+    const [activeReport, setActiveReport] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [reportData, setReportData] = useState(null);
+    const [periodo, setPeriodo] = useState('30');
+    const [exportLoading, setExportLoading] = useState(false);
+
+    // Chart colors
+    const COLORS = ['#be185d', '#0032A1', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ef4444', '#84cc16'];
+
+    const relatorios = [
+        { id: 'visao-geral', titulo: 'Visão Geral', descricao: 'KPIs e métricas principais', icon: '📈', endpoint: '/dashboard/stats' },
+        { id: 'usuarios-ativos', titulo: 'Usuários Ativos', descricao: 'Top usuários por progresso', icon: '👥', endpoint: '/dashboard/users-progress' },
+        { id: 'performance-provas', titulo: 'Performance Provas', descricao: 'Taxa de aprovação por prova', icon: '🎓', endpoint: '/dashboard/provas-performance' },
+        { id: 'episodios-populares', titulo: 'Episódios Populares', descricao: 'Ranking de visualizações', icon: '🎧', endpoint: '/dashboard/episodios-ranking' },
+        { id: 'crescimento', titulo: 'Crescimento', descricao: 'Novos usuários por período', icon: '📊', endpoint: '/dashboard/novos-usuarios' },
+        { id: 'engajamento', titulo: 'Engajamento', descricao: 'Conclusão vs Visualização', icon: '🔥', endpoint: '/dashboard/stats' }
+    ];
+
+    const fetchReportData = async (report) => {
+        setLoading(true);
+        setActiveReport(report);
+        try {
+            let url = report.endpoint;
+            if (report.id === 'crescimento') {
+                url = `${report.endpoint}?dias=${periodo}`;
+            }
+            const res = await api.get(url);
+            setReportData(res.data);
+        } catch (error) {
+            console.error('Erro ao carregar relatório:', error);
+            setReportData(null);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const exportToCSV = () => {
+        if (!reportData) return;
+        setExportLoading(true);
+        try {
+            let csvContent = '';
+            let filename = `relatorio_${activeReport.id}_${new Date().toISOString().split('T')[0]}.csv`;
+
+            if (activeReport.id === 'visao-geral') {
+                csvContent = 'Categoria,Métrica,Valor\n';
+                Object.entries(reportData).forEach(([cat, values]) => {
+                    Object.entries(values).forEach(([key, val]) => {
+                        csvContent += `${cat},${key},${val}\n`;
+                    });
+                });
+            } else if (activeReport.id === 'usuarios-ativos' && reportData.users) {
+                csvContent = 'Nome,Email,Episódios Assistidos,Progresso %\n';
+                reportData.users.forEach(u => {
+                    csvContent += `"${u.nome}","${u.email}",${u.episodios_assistidos},${u.progresso}\n`;
+                });
+            } else if (activeReport.id === 'performance-provas' && reportData.provas) {
+                csvContent = 'Prova,Tentativas,Aprovadas,Taxa Aprovação %,Média Pontuação\n';
+                reportData.provas.forEach(p => {
+                    csvContent += `"${p.titulo}",${p.total_tentativas},${p.aprovadas},${p.taxa_aprovacao},${p.media_pontuacao}\n`;
+                });
+            } else if (activeReport.id === 'episodios-populares' && reportData.episodios) {
+                csvContent = 'Episódio,Visualizações,Concluídos,Taxa Conclusão %\n';
+                reportData.episodios.forEach(e => {
+                    csvContent += `"${e.titulo}",${e.visualizacoes},${e.concluidos},${e.taxa_conclusao}\n`;
+                });
+            } else if (activeReport.id === 'crescimento' && reportData.dados) {
+                csvContent = 'Data,Novos Usuários\n';
+                reportData.dados.forEach(d => {
+                    csvContent += `${d.data},${d.quantidade}\n`;
+                });
+            }
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        } catch (error) {
+            console.error('Erro ao exportar CSV:', error);
+            alert('Erro ao exportar CSV');
+        } finally {
+            setExportLoading(false);
+        }
+    };
+
+    const closeReport = () => {
+        setActiveReport(null);
+        setReportData(null);
+    };
+
+    // Render report content based on type
+    const renderReportContent = () => {
+        if (loading) {
+            return (
+                <div className="flex items-center justify-center py-16">
+                    <div className="w-12 h-12 border-4 border-aec-pink border-t-transparent rounded-full animate-spin"></div>
+                </div>
+            );
+        }
+
+        if (!reportData) {
+            return (
+                <div className="text-center py-16 text-slate-400">
+                    Nenhum dado disponível para este relatório.
+                </div>
+            );
+        }
+
+        switch (activeReport.id) {
+            case 'visao-geral':
+                return (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                <div className="text-2xl font-bold text-white">{reportData.usuarios?.total || 0}</div>
+                                <div className="text-sm text-slate-400">Total Usuários</div>
+                            </div>
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                <div className="text-2xl font-bold text-green-400">{reportData.usuarios?.ativos || 0}</div>
+                                <div className="text-sm text-slate-400">Usuários Ativos</div>
+                            </div>
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                <div className="text-2xl font-bold text-blue-400">{reportData.episodios?.total || 0}</div>
+                                <div className="text-sm text-slate-400">Total Episódios</div>
+                            </div>
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                <div className="text-2xl font-bold text-purple-400">{reportData.provas?.total || 0}</div>
+                                <div className="text-sm text-slate-400">Total Provas</div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                                <h4 className="text-white font-medium mb-4">Distribuição de Usuários</h4>
+                                <ResponsiveContainer width="100%" height={200}>
+                                    <PieChart>
+                                        <Pie
+                                            data={[
+                                                { name: 'Ativos', value: reportData.usuarios?.ativos || 0 },
+                                                { name: 'Pendentes', value: reportData.usuarios?.pendentes || 0 },
+                                                { name: 'Inativos', value: reportData.usuarios?.inativos || 0 }
+                                            ]}
+                                            cx="50%"
+                                            cy="50%"
+                                            outerRadius={70}
+                                            dataKey="value"
+                                            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                        >
+                                            {COLORS.slice(0, 3).map((color, index) => (
+                                                <Cell key={index} fill={color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                                <h4 className="text-white font-medium mb-4">Performance Provas</h4>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">Tentativas</span>
+                                        <span className="text-white font-bold">{reportData.provas?.tentativas || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">Aprovadas</span>
+                                        <span className="text-green-400 font-bold">{reportData.provas?.aprovadas || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-400">Taxa de Aprovação</span>
+                                        <span className="text-aec-pink font-bold">{reportData.provas?.taxa_aprovacao || 0}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+
+            case 'usuarios-ativos':
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                            <h4 className="text-white font-medium mb-4">Top Usuários por Progresso</h4>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={reportData.users?.slice(0, 10) || []} layout="vertical">
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                    <XAxis type="number" domain={[0, 100]} stroke="#94a3b8" />
+                                    <YAxis type="category" dataKey="nome" width={120} stroke="#94a3b8" tick={{ fontSize: 12 }} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
+                                        labelStyle={{ color: '#fff' }}
+                                    />
+                                    <Bar dataKey="progresso" fill="#be185d" radius={[0, 4, 4, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="border-b border-slate-700">
+                                        <th className="p-3 text-slate-400 text-sm">#</th>
+                                        <th className="p-3 text-slate-400 text-sm">Nome</th>
+                                        <th className="p-3 text-slate-400 text-sm">Email</th>
+                                        <th className="p-3 text-slate-400 text-sm text-right">Episódios</th>
+                                        <th className="p-3 text-slate-400 text-sm text-right">Progresso</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {(reportData.users || []).map((u, idx) => (
+                                        <tr key={u.id} className="border-b border-slate-800 hover:bg-slate-800/30">
+                                            <td className="p-3 text-slate-500">{idx + 1}</td>
+                                            <td className="p-3 text-white">{u.nome}</td>
+                                            <td className="p-3 text-slate-400">{u.email}</td>
+                                            <td className="p-3 text-right text-slate-300">{u.episodios_assistidos}/{u.total_episodios}</td>
+                                            <td className="p-3 text-right">
+                                                <span className={`font-bold ${u.progresso >= 80 ? 'text-green-400' : u.progresso >= 50 ? 'text-yellow-400' : 'text-slate-400'}`}>
+                                                    {u.progresso}%
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+
+            case 'performance-provas':
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                            <h4 className="text-white font-medium mb-4">Taxa de Aprovação por Prova</h4>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={reportData.provas || []}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                    <XAxis dataKey="titulo" stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                                    <YAxis domain={[0, 100]} stroke="#94a3b8" />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
+                                        labelStyle={{ color: '#fff' }}
+                                    />
+                                    <Legend />
+                                    <Bar dataKey="taxa_aprovacao" name="Taxa Aprovação %" fill="#10b981" radius={[4, 4, 0, 0]} />
+                                    <Bar dataKey="media_pontuacao" name="Média Pontuação" fill="#be185d" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {(reportData.provas || []).map(p => (
+                                <div key={p.prova_id} className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
+                                    <h5 className="text-white font-medium truncate">{p.titulo}</h5>
+                                    <div className="mt-2 space-y-1 text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">Tentativas</span>
+                                            <span className="text-white">{p.total_tentativas}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">Aprovadas</span>
+                                            <span className="text-green-400">{p.aprovadas}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-400">Taxa</span>
+                                            <span className="text-aec-pink font-bold">{p.taxa_aprovacao}%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+
+            case 'episodios-populares':
+                return (
+                    <div className="space-y-6">
+                        <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                            <h4 className="text-white font-medium mb-4">Ranking de Episódios</h4>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <BarChart data={reportData.episodios || []} layout="vertical">
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                    <XAxis type="number" stroke="#94a3b8" />
+                                    <YAxis type="category" dataKey="titulo" width={150} stroke="#94a3b8" tick={{ fontSize: 11 }} />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
+                                        labelStyle={{ color: '#fff' }}
+                                    />
+                                    <Legend />
+                                    <Bar dataKey="visualizacoes" name="Visualizações" fill="#0032A1" radius={[0, 4, 4, 0]} />
+                                    <Bar dataKey="concluidos" name="Concluídos" fill="#10b981" radius={[0, 4, 4, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                );
+
+            case 'crescimento':
+                return (
+                    <div className="space-y-6">
+                        <div className="flex gap-2 mb-4">
+                            {['7', '30', '90', '365'].map(d => (
+                                <button
+                                    key={d}
+                                    onClick={() => { setPeriodo(d); fetchReportData(activeReport); }}
+                                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${periodo === d
+                                            ? 'bg-aec-pink text-white'
+                                            : 'bg-slate-800 text-slate-400 hover:text-white'
+                                        }`}
+                                >
+                                    {d === '7' ? '7 dias' : d === '30' ? '30 dias' : d === '90' ? '3 meses' : '1 ano'}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                            <h4 className="text-white font-medium mb-4">Novos Usuários por Dia</h4>
+                            <ResponsiveContainer width="100%" height={300}>
+                                <LineChart data={reportData.dados || []}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                    <XAxis dataKey="data" stroke="#94a3b8" tick={{ fontSize: 10 }} />
+                                    <YAxis stroke="#94a3b8" />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', borderRadius: '8px' }}
+                                        labelStyle={{ color: '#fff' }}
+                                    />
+                                    <Line
+                                        type="monotone"
+                                        dataKey="quantidade"
+                                        stroke="#be185d"
+                                        strokeWidth={2}
+                                        dot={{ fill: '#be185d', r: 4 }}
+                                        activeDot={{ r: 6, fill: '#fff', stroke: '#be185d', strokeWidth: 2 }}
+                                    />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="grid grid-cols-3 gap-4">
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 text-center">
+                                <div className="text-2xl font-bold text-white">
+                                    {(reportData.dados || []).reduce((sum, d) => sum + d.quantidade, 0)}
+                                </div>
+                                <div className="text-sm text-slate-400">Total no Período</div>
+                            </div>
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 text-center">
+                                <div className="text-2xl font-bold text-green-400">
+                                    {Math.max(...(reportData.dados || [{ quantidade: 0 }]).map(d => d.quantidade))}
+                                </div>
+                                <div className="text-sm text-slate-400">Pico Diário</div>
+                            </div>
+                            <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 text-center">
+                                <div className="text-2xl font-bold text-blue-400">
+                                    {((reportData.dados || []).reduce((sum, d) => sum + d.quantidade, 0) / Math.max((reportData.dados || []).length, 1)).toFixed(1)}
+                                </div>
+                                <div className="text-sm text-slate-400">Média Diária</div>
+                            </div>
+                        </div>
+                    </div>
+                );
+
+            case 'engajamento':
+                const totalVisualizacoes = reportData.episodios?.visualizacoes || 0;
+                const totalConcluidos = reportData.episodios?.concluidos || 0;
+                const taxaEngajamento = totalVisualizacoes > 0 ? ((totalConcluidos / totalVisualizacoes) * 100).toFixed(1) : 0;
+                return (
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="bg-gradient-to-br from-blue-500/20 to-blue-600/10 p-6 rounded-xl border border-blue-500/30">
+                                <div className="text-3xl font-bold text-white">{totalVisualizacoes}</div>
+                                <div className="text-sm text-blue-300">Total Visualizações</div>
+                            </div>
+                            <div className="bg-gradient-to-br from-green-500/20 to-green-600/10 p-6 rounded-xl border border-green-500/30">
+                                <div className="text-3xl font-bold text-white">{totalConcluidos}</div>
+                                <div className="text-sm text-green-300">Total Concluídos</div>
+                            </div>
+                            <div className="bg-gradient-to-br from-aec-pink/20 to-purple-600/10 p-6 rounded-xl border border-aec-pink/30">
+                                <div className="text-3xl font-bold text-white">{taxaEngajamento}%</div>
+                                <div className="text-sm text-pink-300">Taxa de Engajamento</div>
+                            </div>
+                        </div>
+                        <div className="bg-slate-800/30 p-4 rounded-xl border border-slate-700">
+                            <h4 className="text-white font-medium mb-4">Engajamento por Área</h4>
+                            <ResponsiveContainer width="100%" height={250}>
+                                <PieChart>
+                                    <Pie
+                                        data={[
+                                            { name: 'Visualizados', value: totalVisualizacoes - totalConcluidos },
+                                            { name: 'Concluídos', value: totalConcluidos }
+                                        ]}
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={90}
+                                        dataKey="value"
+                                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                                    >
+                                        <Cell fill="#0032A1" />
+                                        <Cell fill="#10b981" />
+                                    </Pie>
+                                    <Tooltip />
+                                    <Legend />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                );
+
+            default:
+                return <div className="text-slate-400">Relatório não disponível.</div>;
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-white">Relatórios</h2>
+                    <p className="text-slate-400 text-sm">Analytics e exportação de dados</p>
+                </div>
+            </div>
+
+            {!activeReport ? (
+                // Grid of report cards
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {relatorios.map(rel => (
+                        <button
+                            key={rel.id}
+                            onClick={() => fetchReportData(rel)}
+                            className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 text-left hover:border-aec-pink/50 hover:bg-slate-800/50 transition-all group"
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className="w-14 h-14 bg-gradient-to-br from-aec-pink/20 to-purple-600/20 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform">
+                                    {rel.icon}
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-white text-lg">{rel.titulo}</h3>
+                                    <p className="text-slate-400 text-sm">{rel.descricao}</p>
+                                </div>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            ) : (
+                // Report detail view
+                <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
+                    <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-800/30">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={closeReport}
+                                className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                            >
+                                ← Voltar
+                            </button>
+                            <div className="flex items-center gap-3">
+                                <span className="text-2xl">{activeReport.icon}</span>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">{activeReport.titulo}</h3>
+                                    <p className="text-sm text-slate-400">{activeReport.descricao}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={exportToCSV}
+                                disabled={exportLoading || !reportData}
+                                className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:text-slate-500 text-white rounded-xl transition-colors flex items-center gap-2"
+                            >
+                                {exportLoading ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <span>📥</span>
+                                )}
+                                CSV
+                            </button>
+                            <button
+                                onClick={() => fetchReportData(activeReport)}
+                                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-xl transition-colors"
+                            >
+                                🔄 Atualizar
+                            </button>
+                        </div>
+                    </div>
+                    <div className="p-6">
+                        {renderReportContent()}
                     </div>
                 </div>
             )}
