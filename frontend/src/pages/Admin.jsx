@@ -595,112 +595,251 @@ function StatCard({ title, value, icon, color, subtitle, badge }) {
     );
 }
 
-// Users Tab Component
+// Users Tab Component - Enhanced with Filters, Modals, and Actions
 function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh }) {
     const [filter, setFilter] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [areaFilter, setAreaFilter] = useState('all');
+    const [cargoFilter, setCargoFilter] = useState('all');
+    const [selectedUsers, setSelectedUsers] = useState([]);
+    const [showDetailsModal, setShowDetailsModal] = useState(false);
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [actionMenuOpen, setActionMenuOpen] = useState(null);
+    const itemsPerPage = 10;
 
+    // Get unique areas and cargos for filters
+    const areas = [...new Set(users.map(u => u.area).filter(Boolean))];
+    const cargos = [...new Set(users.map(u => u.cargo).filter(Boolean))];
+
+    // Filter users
     const filteredUsers = users.filter(u => {
-        if (filter === 'all') return true;
-        return u.status === filter;
+        const matchesStatus = filter === 'all' || u.status === filter;
+        const matchesSearch = !searchTerm ||
+            u.nome_completo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            u.email?.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesArea = areaFilter === 'all' || u.area === areaFilter;
+        const matchesCargo = cargoFilter === 'all' || u.cargo === cargoFilter;
+        return matchesStatus && matchesSearch && matchesArea && matchesCargo;
     });
+
+    // Pagination
+    const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+    const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+    // Selection handlers
+    const toggleSelectAll = () => {
+        if (selectedUsers.length === paginatedUsers.length) {
+            setSelectedUsers([]);
+        } else {
+            setSelectedUsers(paginatedUsers.map(u => u.id));
+        }
+    };
+
+    const toggleSelectUser = (userId) => {
+        setSelectedUsers(prev =>
+            prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+        );
+    };
+
+    // Action handlers
+    const openDetails = (user) => {
+        setSelectedUser(user);
+        setShowDetailsModal(true);
+        setActionMenuOpen(null);
+    };
+
+    const openEdit = (user) => {
+        setSelectedUser(user);
+        setShowEditModal(true);
+        setActionMenuOpen(null);
+    };
+
+    const openDelete = (user) => {
+        setSelectedUser(user);
+        setShowDeleteModal(true);
+        setActionMenuOpen(null);
+    };
+
+    const clearFilters = () => {
+        setFilter('all');
+        setSearchTerm('');
+        setAreaFilter('all');
+        setCargoFilter('all');
+        setCurrentPage(1);
+    };
+
+    const activeFiltersCount = [filter !== 'all', searchTerm, areaFilter !== 'all', cargoFilter !== 'all'].filter(Boolean).length;
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-white">Usuários</h2>
-                <button
-                    onClick={onRefresh}
-                    className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors"
-                >
-                    🔄 Atualizar
-                </button>
+            {/* Header */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 className="text-2xl font-bold text-white">Gerenciar Usuários</h2>
+                    <p className="text-slate-400 text-sm">Total: {users.length} usuários cadastrados</p>
+                </div>
+                <div className="flex gap-2">
+                    <button
+                        onClick={onRefresh}
+                        className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors"
+                    >
+                        🔄 Atualizar
+                    </button>
+                    <button className="px-4 py-2 bg-green-500/20 text-green-400 rounded-xl hover:bg-green-500/30 transition-colors">
+                        📥 Exportar
+                    </button>
+                </div>
             </div>
 
-            {/* Pending Users */}
+            {/* Pending Users Alert */}
             {pendingUsers.length > 0 && (
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-6">
-                    <h3 className="font-bold text-yellow-400 mb-4 flex items-center gap-2">
-                        <span>⏳</span> Aguardando Aprovação ({pendingUsers.length})
-                    </h3>
-                    <div className="space-y-3">
-                        {pendingUsers.map(user => (
-                            <div key={user.id} className="bg-slate-900/80 rounded-xl p-4 flex items-center justify-between border border-slate-700">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-yellow-500/20 rounded-full flex items-center justify-center text-yellow-400 font-bold">
-                                        {user.nome_completo.charAt(0).toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <p className="font-medium text-white">{user.nome_completo}</p>
-                                        <p className="text-sm text-slate-400">{user.email}</p>
-                                        <div className="flex gap-2 mt-1">
-                                            <span className="text-xs bg-slate-800 px-2 py-0.5 rounded text-slate-300">
-                                                {user.matricula_aec}
-                                            </span>
-                                            <span className="text-xs bg-purple-500/20 px-2 py-0.5 rounded text-purple-400">
-                                                {user.cargo}
-                                            </span>
-                                            <span className="text-xs bg-blue-500/20 px-2 py-0.5 rounded text-blue-400">
-                                                {user.area}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => onApprove(user.id)}
-                                        className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-colors"
-                                    >
-                                        ✓ Aprovar
-                                    </button>
-                                    <button
-                                        onClick={() => onReject(user.id)}
-                                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-medium transition-colors"
-                                    >
-                                        ✕ Recusar
-                                    </button>
-                                </div>
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-2xl p-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">⏳</span>
+                            <div>
+                                <p className="font-bold text-yellow-400">{pendingUsers.length} usuário(s) aguardando aprovação</p>
+                                <p className="text-sm text-yellow-400/70">Clique para revisar</p>
                             </div>
-                        ))}
+                        </div>
+                        <button
+                            onClick={() => setFilter('pendente')}
+                            className="px-4 py-2 bg-yellow-500 text-white rounded-xl font-medium hover:bg-yellow-600 transition-colors"
+                        >
+                            Ver Pendentes
+                        </button>
                     </div>
                 </div>
             )}
 
-            {/* Filter */}
-            <div className="flex gap-2">
-                {['all', 'ativo', 'pendente', 'inativo'].map(status => (
-                    <button
-                        key={status}
-                        onClick={() => setFilter(status)}
-                        className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${filter === status
-                            ? 'bg-aec-pink text-white'
-                            : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                            }`}
+            {/* Filters Bar */}
+            <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-4">
+                <div className="flex flex-wrap gap-3">
+                    {/* Search */}
+                    <div className="flex-1 min-w-[200px]">
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                            <input
+                                type="text"
+                                placeholder="Buscar por nome ou email..."
+                                value={searchTerm}
+                                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                                className="w-full pl-10 pr-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:border-aec-pink focus:outline-none"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Status Filter */}
+                    <select
+                        value={filter}
+                        onChange={(e) => { setFilter(e.target.value); setCurrentPage(1); }}
+                        className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
                     >
-                        {status === 'all' ? 'Todos' : status.charAt(0).toUpperCase() + status.slice(1)}
-                    </button>
-                ))}
+                        <option value="all">Todos Status</option>
+                        <option value="ativo">✅ Ativo</option>
+                        <option value="pendente">⏳ Pendente</option>
+                        <option value="inativo">❌ Inativo</option>
+                    </select>
+
+                    {/* Area Filter */}
+                    <select
+                        value={areaFilter}
+                        onChange={(e) => { setAreaFilter(e.target.value); setCurrentPage(1); }}
+                        className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                    >
+                        <option value="all">Todas Áreas</option>
+                        {areas.map(area => (
+                            <option key={area} value={area}>{area}</option>
+                        ))}
+                    </select>
+
+                    {/* Cargo Filter */}
+                    <select
+                        value={cargoFilter}
+                        onChange={(e) => { setCargoFilter(e.target.value); setCurrentPage(1); }}
+                        className="px-4 py-2.5 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                    >
+                        <option value="all">Todos Cargos</option>
+                        {cargos.map(cargo => (
+                            <option key={cargo} value={cargo}>{cargo}</option>
+                        ))}
+                    </select>
+
+                    {/* Clear Filters */}
+                    {activeFiltersCount > 0 && (
+                        <button
+                            onClick={clearFilters}
+                            className="px-4 py-2.5 bg-red-500/20 text-red-400 rounded-xl hover:bg-red-500/30 transition-colors flex items-center gap-2"
+                        >
+                            ✕ Limpar ({activeFiltersCount})
+                        </button>
+                    )}
+                </div>
             </div>
 
-            {/* Users List */}
+            {/* Bulk Actions Bar */}
+            {selectedUsers.length > 0 && (
+                <div className="bg-aec-pink/20 border border-aec-pink/30 rounded-2xl p-4 flex items-center justify-between">
+                    <span className="text-aec-pink font-medium">{selectedUsers.length} usuário(s) selecionado(s)</span>
+                    <div className="flex gap-2">
+                        <button className="px-4 py-2 bg-green-500 text-white rounded-xl hover:bg-green-600">
+                            ✓ Aprovar
+                        </button>
+                        <button className="px-4 py-2 bg-red-500 text-white rounded-xl hover:bg-red-600">
+                            ✕ Desativar
+                        </button>
+                        <button
+                            onClick={() => setSelectedUsers([])}
+                            className="px-4 py-2 bg-slate-700 text-slate-300 rounded-xl hover:bg-slate-600"
+                        >
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Users Table */}
             <div className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl overflow-hidden">
                 <table className="w-full">
                     <thead>
-                        <tr className="border-b border-slate-800">
+                        <tr className="border-b border-slate-800 bg-slate-800/50">
+                            <th className="p-4 text-left">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedUsers.length === paginatedUsers.length && paginatedUsers.length > 0}
+                                    onChange={toggleSelectAll}
+                                    className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-aec-pink focus:ring-aec-pink"
+                                />
+                            </th>
                             <th className="text-left p-4 text-slate-400 font-medium text-sm">Usuário</th>
                             <th className="text-left p-4 text-slate-400 font-medium text-sm hidden md:table-cell">Matrícula</th>
                             <th className="text-left p-4 text-slate-400 font-medium text-sm hidden lg:table-cell">Cargo</th>
                             <th className="text-left p-4 text-slate-400 font-medium text-sm hidden lg:table-cell">Área</th>
                             <th className="text-left p-4 text-slate-400 font-medium text-sm">Status</th>
-                            <th className="text-left p-4 text-slate-400 font-medium text-sm">Perfil</th>
+                            <th className="text-left p-4 text-slate-400 font-medium text-sm">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredUsers.map(user => (
-                            <tr key={user.id} className="border-b border-slate-800/50 hover:bg-slate-800/30">
+                        {paginatedUsers.map(user => (
+                            <tr key={user.id} className={`border-b border-slate-800/50 hover:bg-slate-800/30 ${selectedUsers.includes(user.id) ? 'bg-aec-pink/10' : ''}`}>
+                                <td className="p-4">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedUsers.includes(user.id)}
+                                        onChange={() => toggleSelectUser(user.id)}
+                                        className="w-4 h-4 rounded border-slate-600 bg-slate-800 text-aec-pink focus:ring-aec-pink"
+                                    />
+                                </td>
                                 <td className="p-4">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-aec-pink/20 rounded-full flex items-center justify-center text-aec-pink font-bold">
-                                            {user.nome_completo.charAt(0).toUpperCase()}
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${user.status === 'ativo' ? 'bg-green-500/20 text-green-400' :
+                                                user.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                    'bg-red-500/20 text-red-400'
+                                            }`}>
+                                            {user.nome_completo?.charAt(0).toUpperCase() || '?'}
                                         </div>
                                         <div>
                                             <p className="font-medium text-white">{user.nome_completo}</p>
@@ -710,27 +849,220 @@ function UsersTab({ users, pendingUsers, onApprove, onReject, onRefresh }) {
                                 </td>
                                 <td className="p-4 text-slate-300 hidden md:table-cell">{user.matricula_aec || '-'}</td>
                                 <td className="p-4 text-slate-300 hidden lg:table-cell">{user.cargo || '-'}</td>
-                                <td className="p-4 text-slate-300 hidden lg:table-cell">{user.area || '-'}</td>
+                                <td className="p-4 hidden lg:table-cell">
+                                    <span className="px-2 py-1 bg-blue-500/20 text-blue-400 rounded text-xs">{user.area || '-'}</span>
+                                </td>
                                 <td className="p-4">
                                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.status === 'ativo' ? 'bg-green-500/20 text-green-400' :
-                                        user.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
-                                            'bg-red-500/20 text-red-400'
+                                            user.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
+                                                'bg-red-500/20 text-red-400'
                                         }`}>
                                         {user.status}
                                     </span>
                                 </td>
                                 <td className="p-4">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${user.perfil === 'admin' ? 'bg-purple-500/20 text-purple-400' :
-                                        'bg-slate-500/20 text-slate-400'
-                                        }`}>
-                                        {user.perfil}
-                                    </span>
+                                    <div className="relative">
+                                        <button
+                                            onClick={() => setActionMenuOpen(actionMenuOpen === user.id ? null : user.id)}
+                                            className="p-2 hover:bg-slate-700 rounded-lg transition-colors"
+                                        >
+                                            ⋮
+                                        </button>
+                                        {actionMenuOpen === user.id && (
+                                            <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-xl shadow-xl z-10 py-2">
+                                                <button onClick={() => openDetails(user)} className="w-full px-4 py-2 text-left text-slate-300 hover:bg-slate-700 flex items-center gap-2">
+                                                    👁️ Ver Detalhes
+                                                </button>
+                                                <button onClick={() => openEdit(user)} className="w-full px-4 py-2 text-left text-slate-300 hover:bg-slate-700 flex items-center gap-2">
+                                                    ✏️ Editar
+                                                </button>
+                                                {user.status === 'pendente' && (
+                                                    <button onClick={() => { onApprove(user.id); setActionMenuOpen(null); }} className="w-full px-4 py-2 text-left text-green-400 hover:bg-slate-700 flex items-center gap-2">
+                                                        ✅ Aprovar
+                                                    </button>
+                                                )}
+                                                <button onClick={() => openDelete(user)} className="w-full px-4 py-2 text-left text-red-400 hover:bg-slate-700 flex items-center gap-2">
+                                                    🗑️ Deletar
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
                     </tbody>
                 </table>
+
+                {/* Pagination */}
+                <div className="p-4 border-t border-slate-800 flex items-center justify-between">
+                    <span className="text-sm text-slate-400">
+                        Mostrando {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, filteredUsers.length)} de {filteredUsers.length}
+                    </span>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="px-3 py-1 bg-slate-800 text-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700"
+                        >
+                            ← Anterior
+                        </button>
+                        <span className="px-3 py-1 bg-aec-pink text-white rounded-lg">{currentPage}</span>
+                        <button
+                            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages || totalPages === 0}
+                            className="px-3 py-1 bg-slate-800 text-slate-300 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-700"
+                        >
+                            Próximo →
+                        </button>
+                    </div>
+                </div>
             </div>
+
+            {/* Details Modal */}
+            {showDetailsModal && selectedUser && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-4">
+                                <div className={`w-16 h-16 rounded-full flex items-center justify-center text-2xl font-bold ${selectedUser.status === 'ativo' ? 'bg-green-500/20 text-green-400' :
+                                        selectedUser.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
+                                            'bg-red-500/20 text-red-400'
+                                    }`}>
+                                    {selectedUser.nome_completo?.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-bold text-white">{selectedUser.nome_completo}</h3>
+                                    <p className="text-slate-400">{selectedUser.email}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowDetailsModal(false)} className="text-slate-400 hover:text-white text-xl">✕</button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 mb-6">
+                            <div className="bg-slate-800/50 rounded-xl p-4">
+                                <p className="text-slate-400 text-sm">Matrícula</p>
+                                <p className="text-white font-medium">{selectedUser.matricula_aec || '-'}</p>
+                            </div>
+                            <div className="bg-slate-800/50 rounded-xl p-4">
+                                <p className="text-slate-400 text-sm">Área</p>
+                                <p className="text-white font-medium">{selectedUser.area || '-'}</p>
+                            </div>
+                            <div className="bg-slate-800/50 rounded-xl p-4">
+                                <p className="text-slate-400 text-sm">Cargo</p>
+                                <p className="text-white font-medium">{selectedUser.cargo || '-'}</p>
+                            </div>
+                            <div className="bg-slate-800/50 rounded-xl p-4">
+                                <p className="text-slate-400 text-sm">Status</p>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedUser.status === 'ativo' ? 'bg-green-500/20 text-green-400' :
+                                        selectedUser.status === 'pendente' ? 'bg-yellow-500/20 text-yellow-400' :
+                                            'bg-red-500/20 text-red-400'
+                                    }`}>{selectedUser.status}</span>
+                            </div>
+                            <div className="bg-slate-800/50 rounded-xl p-4">
+                                <p className="text-slate-400 text-sm">Perfil</p>
+                                <span className={`px-3 py-1 rounded-full text-xs font-medium ${selectedUser.perfil === 'admin' ? 'bg-purple-500/20 text-purple-400' : 'bg-slate-500/20 text-slate-400'
+                                    }`}>{selectedUser.perfil}</span>
+                            </div>
+                            <div className="bg-slate-800/50 rounded-xl p-4">
+                                <p className="text-slate-400 text-sm">Cadastro</p>
+                                <p className="text-white font-medium">{selectedUser.created_at ? new Date(selectedUser.created_at).toLocaleDateString('pt-BR') : '-'}</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <button onClick={() => { setShowDetailsModal(false); openEdit(selectedUser); }} className="flex-1 py-3 bg-aec-pink text-white rounded-xl hover:bg-pink-600 transition-colors font-medium">
+                                ✏️ Editar Usuário
+                            </button>
+                            <button onClick={() => setShowDetailsModal(false)} className="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl hover:bg-slate-600 transition-colors">
+                                Fechar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            {showEditModal && selectedUser && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg">
+                        <h3 className="text-xl font-bold text-white mb-6">Editar Usuário</h3>
+                        <form className="space-y-4">
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Nome Completo</label>
+                                <input type="text" defaultValue={selectedUser.nome_completo} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none" />
+                            </div>
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Email</label>
+                                <input type="email" defaultValue={selectedUser.email} disabled className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-500 cursor-not-allowed" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-2">Área</label>
+                                    <select defaultValue={selectedUser.area} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none">
+                                        <option value="Qualidade">Qualidade</option>
+                                        <option value="TI">TI</option>
+                                        <option value="RH">RH</option>
+                                        <option value="Comercial">Comercial</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="block text-sm text-slate-400 mb-2">Cargo</label>
+                                    <select defaultValue={selectedUser.cargo} className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none">
+                                        <option value="Analista">Analista</option>
+                                        <option value="Coordenador">Coordenador</option>
+                                        <option value="Supervisor">Supervisor</option>
+                                        <option value="Gerente">Gerente</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Status</label>
+                                <div className="flex gap-4">
+                                    <label className="flex items-center gap-2 text-slate-300">
+                                        <input type="radio" name="status" value="ativo" defaultChecked={selectedUser.status === 'ativo'} className="text-aec-pink" />
+                                        Ativo
+                                    </label>
+                                    <label className="flex items-center gap-2 text-slate-300">
+                                        <input type="radio" name="status" value="inativo" defaultChecked={selectedUser.status === 'inativo'} className="text-aec-pink" />
+                                        Inativo
+                                    </label>
+                                </div>
+                            </div>
+                            <div className="flex gap-3 pt-4">
+                                <button type="button" onClick={() => setShowEditModal(false)} className="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl hover:bg-slate-600">
+                                    Cancelar
+                                </button>
+                                <button type="submit" className="flex-1 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 font-medium">
+                                    Salvar Alterações
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Modal */}
+            {showDeleteModal && selectedUser && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+                    <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md">
+                        <h3 className="text-xl font-bold text-white mb-2">⚠️ Confirmar Exclusão</h3>
+                        <p className="text-slate-400 mb-4">Esta ação é <span className="text-red-400 font-bold">IRREVERSÍVEL</span>. Deletar o usuário irá:</p>
+                        <ul className="list-disc list-inside text-red-400 text-sm mb-4 space-y-1">
+                            <li>Remover todos os dados pessoais</li>
+                            <li>Excluir progresso de episódios</li>
+                            <li>Excluir resultados de provas</li>
+                            <li>Excluir certificados emitidos</li>
+                        </ul>
+                        <p className="text-slate-300 mb-4">Você está prestes a deletar: <span className="text-white font-bold">{selectedUser.nome_completo}</span></p>
+                        <div className="flex gap-3">
+                            <button onClick={() => setShowDeleteModal(false)} className="flex-1 py-3 bg-slate-700 text-slate-300 rounded-xl hover:bg-slate-600">
+                                Cancelar
+                            </button>
+                            <button className="flex-1 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 font-medium">
+                                Deletar Permanentemente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
