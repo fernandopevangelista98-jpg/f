@@ -64,7 +64,7 @@ async def list_provas(
         # Usuários comuns veem apenas provas de temporadas publicadas
         provas = db.query(Prova)\
             .join(Temporada)\
-            .filter(Temporada.status == "publicada")\
+            .filter(Temporada.status == "publicado")\
             .order_by(Prova.created_at.desc())\
             .all()
     
@@ -486,7 +486,7 @@ async def download_certificado(
     pdf_bytes = gerar_certificado(
         nome_aluno=current_user.nome_completo,
         titulo_prova=prova.titulo,
-        titulo_temporada=temporada.titulo if temporada else "N/A",
+        titulo_temporada=temporada.nome if temporada else "N/A",
         pontuacao=float(resultado.pontuacao),
         data_realizacao=resultado.data_realizacao
     )

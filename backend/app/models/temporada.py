@@ -1,7 +1,7 @@
 """
 Model de Temporada
 """
-from sqlalchemy import Column, String, Integer, DateTime, Text
+from sqlalchemy import Column, String, Integer, DateTime, Text, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -19,6 +19,8 @@ class Temporada(Base):
     mantra = Column(Text)
     capa_url = Column(Text)
     status = Column(String(20), default="rascunho", index=True)  # 'rascunho', 'publicado', 'arquivado'
+    data_lancamento = Column(DateTime(timezone=True))  # Data/hora de lançamento agendado
+    visivel = Column(Boolean, default=True)  # Controle de visibilidade
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

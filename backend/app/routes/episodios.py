@@ -16,6 +16,8 @@ from app.utils.jwt import get_current_user, get_current_admin
 
 router = APIRouter()
 
+from sqlalchemy import or_, and_, func
+
 @router.get("", response_model=List[EpisodioOut])
 async def list_episodios(
     temporada_id: Optional[UUID] = Query(None),
@@ -31,9 +33,16 @@ async def list_episodios(
     if temporada_id:
         query = query.filter(Episodio.temporada_id == temporada_id)
     
-    # Usuário comum só vê publicados
+    # Usuário comum só vê publicados, visíveis e com data de lançamento alcançada
     if current_user.perfil != "admin":
-        query = query.filter(Episodio.status == "publicado")
+        query = query.filter(
+            Episodio.status == "publicado",
+            Episodio.visivel == True,
+            or_(
+                Episodio.data_lancamento == None,
+                Episodio.data_lancamento <= func.now()
+            )
+        )
     elif status_filter:
         query = query.filter(Episodio.status == status_filter)
     
@@ -95,7 +104,10 @@ async def create_episodio(
         status=episodio_data.status,
         audio_url=episodio_data.audio_url,
         video_url=episodio_data.video_url,
-        transcricao=episodio_data.transcricao
+        transcricao=episodio_data.transcricao,
+        conteudo_texto=episodio_data.conteudo_texto,
+        data_lancamento=episodio_data.data_lancamento,
+        visivel=episodio_data.visivel
     )
     
     db.add(episodio)

@@ -266,6 +266,67 @@ async def upload_image(
             detail=f"Erro ao fazer upload: {str(e)}"
         )
 
+@router.post("/upload/attachment")
+async def upload_attachment(
+    file: UploadFile = File(...),
+    episodio_id: UUID = Form(...),
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(get_current_admin)
+):
+    """
+    Upload de anexo (PDF, Doc, Áudio Extra, etc) para um episódio.
+    Apenas admins.
+    """
+    # Verificar episódio
+    episodio = db.query(Episodio).filter(Episodio.id == episodio_id).first()
+    if not episodio:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Episódio não encontrado"
+        )
+    
+    # Validar tamanho (Limite de 50MB para ser seguro)
+    contents = await file.read()
+    if len(contents) > 50 * 1024 * 1024:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Arquivo muito grande. Máximo: 50 MB"
+        )
+    
+    # Gerar nome único e manter extensão original
+    original_filename = file.filename or "arquivo"
+    ext = original_filename.split('.')[-1] if '.' in original_filename else 'bin'
+    
+    # Sanitizar nome se necessário, mas aqui vamos usar uuid para o nome no storage
+    # e manter o nome original no banco (na tabela anexos)
+    file_uuid = uuid4()
+    key = f"episodios/{episodio.temporada_id}/{episodio_id}/anexos/{file_uuid}.{ext}"
+    
+    try:
+        s3 = get_s3_client()
+        s3.put_object(
+            Bucket=R2_BUCKET_NAME,
+            Key=key,
+            Body=contents,
+            ContentType=file.content_type or 'application/octet-stream'
+        )
+        
+        url = get_public_url(key)
+        
+        return {
+            "message": "Arquivo enviado com sucesso",
+            "url": url,
+            "size": len(contents),
+            "filename": original_filename,
+            "type": file.content_type
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao fazer upload: {str(e)}"
+        )
+
 @router.delete("/{tipo}/{entidade_id}")
 async def delete_file(
     tipo: str,

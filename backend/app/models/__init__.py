@@ -4,6 +4,7 @@ from .temporada import Temporada
 from .episodio import Episodio
 from .prova import Prova, Pergunta, OpcaoResposta, ResultadoProva
 from .progresso import UsuarioEpisodio
+from .anexo import AnexoEpisodio
 
 __all__ = [
     "User",
@@ -13,5 +14,6 @@ __all__ = [
     "Pergunta",
     "OpcaoResposta",
     "ResultadoProva",
-    "UsuarioEpisodio"
+    "UsuarioEpisodio",
+    "AnexoEpisodio"
 ]

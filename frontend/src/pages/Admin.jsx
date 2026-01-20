@@ -277,6 +277,16 @@ export default function Admin() {
                                 <span className="font-medium">Temporadas</span>
                             </button>
                             <button
+                                onClick={() => setActiveTab('episodios')}
+                                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'episodios'
+                                    ? 'bg-aec-pink/20 text-aec-pink border border-aec-pink/30'
+                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                    }`}
+                            >
+                                <span>🎧</span>
+                                <span className="font-medium">Episódios</span>
+                            </button>
+                            <button
                                 onClick={() => setActiveTab('provas')}
                                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${activeTab === 'provas'
                                     ? 'bg-aec-pink/20 text-aec-pink border border-aec-pink/30'
@@ -1259,10 +1269,12 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
     const [formData, setFormData] = useState({
         nome: '',
         descricao: '',
-        ordem: 1,
         mantra: '',
+        ordem: 1,
         status: 'rascunho',
-        capa_url: '' // Placeholder for future R2 integration
+        capa_url: '', // Placeholder for future R2 integration
+        data_lancamento: '',
+        visivel: true
     });
 
     const openCreateModal = () => {
@@ -1272,7 +1284,9 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
             ordem: temporadas.length + 1,
             mantra: '',
             status: 'rascunho',
-            capa_url: ''
+            capa_url: '',
+            data_lancamento: '',
+            visivel: true
         });
         setShowCreateModal(true);
     };
@@ -1281,7 +1295,9 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
         setSelectedSeason(season);
         setFormData({
             ...season,
-            capa_url: season.capa_url || ''
+            capa_url: season.capa_url || '',
+            data_lancamento: season.data_lancamento ? season.data_lancamento.split('T')[0] : '',
+            visivel: season.visivel !== undefined ? season.visivel : true
         });
         setShowEditModal(true);
     };
@@ -1551,23 +1567,47 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
                             </div>
 
                             <div>
-                                <label className="block text-sm text-slate-400 mb-2">Status</label>
-                                <div className="flex bg-slate-800 p-1 rounded-xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, status: 'rascunho' })}
-                                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'rascunho' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                                    >
-                                        Rascunho
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, status: 'publicado' })}
-                                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'publicado' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                                    >
-                                        Publicado
-                                    </button>
+                                <label className="block text-sm text-slate-400 mb-2">Status & Visibilidade</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="flex bg-slate-800 p-1 rounded-xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, status: 'rascunho' })}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'rascunho' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                        >
+                                            Rascunho
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, status: 'publicado' })}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'publicado' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                        >
+                                            Publicado
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 bg-slate-800 px-4 rounded-xl">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.visivel}
+                                            onChange={(e) => setFormData({ ...formData, visivel: e.target.checked })}
+                                            className="w-5 h-5 rounded border-slate-700 text-aec-pink focus:ring-aec-pink bg-slate-800"
+                                            id="create-visivel"
+                                        />
+                                        <label htmlFor="create-visivel" className="text-white text-sm cursor-pointer select-none">Visível na lista?</label>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Data Lançamento (Opcional)</label>
+                                <input
+                                    type="datetime-local"
+                                    value={formData.data_lancamento}
+                                    onChange={(e) => setFormData({ ...formData, data_lancamento: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                />
+                                <p className="text-xs text-slate-500 mt-1">Se preenchido, o conteúdo só será liberado após essa data.</p>
                             </div>
 
                             <div className="flex gap-3 pt-4 border-t border-slate-800 mt-6">
@@ -1640,23 +1680,47 @@ function TemporadasTab({ temporadas, onRefresh, onCreate, onUpdate, onDuplicate,
                             </div>
 
                             <div>
-                                <label className="block text-sm text-slate-400 mb-2">Status</label>
-                                <div className="flex bg-slate-800 p-1 rounded-xl">
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, status: 'rascunho' })}
-                                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'rascunho' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                                    >
-                                        Rascunho
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, status: 'publicado' })}
-                                        className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'publicado' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                                    >
-                                        Publicado
-                                    </button>
+                                <label className="block text-sm text-slate-400 mb-2">Status & Visibilidade</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="flex bg-slate-800 p-1 rounded-xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, status: 'rascunho' })}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'rascunho' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                        >
+                                            Rascunho
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, status: 'publicado' })}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'publicado' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                        >
+                                            Publicado
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 bg-slate-800 px-4 rounded-xl">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.visivel}
+                                            onChange={(e) => setFormData({ ...formData, visivel: e.target.checked })}
+                                            className="w-5 h-5 rounded border-slate-700 text-aec-pink focus:ring-aec-pink bg-slate-800"
+                                            id="edit-visivel"
+                                        />
+                                        <label htmlFor="edit-visivel" className="text-white text-sm cursor-pointer select-none">Visível na lista?</label>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Data Lançamento (Opcional)</label>
+                                <input
+                                    type="datetime-local"
+                                    value={formData.data_lancamento}
+                                    onChange={(e) => setFormData({ ...formData, data_lancamento: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                />
+                                <p className="text-xs text-slate-500 mt-1">Se preenchido, o conteúdo só será liberado após essa data.</p>
                             </div>
 
                             <div className="flex gap-3 pt-4 border-t border-slate-800 mt-6">
@@ -1730,7 +1794,20 @@ function EpisodiosTab({ temporadas, onCreate, onUpdate, onDelete }) {
         status: 'rascunho',
         video_url: '',
         audio_url: '',
-        transcricao: ''
+        transcricao: '',
+        conteudo_texto: '',
+        data_lancamento: '',
+        visivel: true
+    });
+
+    // Attachments State
+    const [anexos, setAnexos] = useState([]);
+    const [loadingAnexos, setLoadingAnexos] = useState(false);
+    const [uploadingAnexo, setUploadingAnexo] = useState(false);
+    const [anexoForm, setAnexoForm] = useState({
+        nome: '',
+        tipo: 'pdf',
+        file: null
     });
 
     useEffect(() => {
@@ -1757,6 +1834,67 @@ function EpisodiosTab({ temporadas, onCreate, onUpdate, onDelete }) {
         }
     };
 
+    const fetchAnexos = async (episodeId) => {
+        setLoadingAnexos(true);
+        try {
+            const res = await api.get(`/episodios/${episodeId}/anexos`);
+            setAnexos(res.data || []);
+        } catch (error) {
+            console.error('Erro ao buscar anexos:', error);
+            setAnexos([]);
+        } finally {
+            setLoadingAnexos(false);
+        }
+    };
+
+    const handleUploadAnexo = async (e) => {
+        e.preventDefault();
+        if (!anexoForm.file || !selectedEpisode) return;
+
+        setUploadingAnexo(true);
+        try {
+            // 1. Upload to Storage
+            const storagePayload = new FormData();
+            storagePayload.append('file', anexoForm.file);
+            storagePayload.append('episodio_id', selectedEpisode.id);
+
+            const uploadRes = await api.post('/storage/upload/attachment', storagePayload, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            // 2. Create Anexo Record
+            const anexoData = new FormData();
+            anexoData.append('tipo', anexoForm.tipo);
+            anexoData.append('nome_arquivo', anexoForm.nome || anexoForm.file.name);
+            anexoData.append('url', uploadRes.data.url);
+            anexoData.append('tamanho_bytes', uploadRes.data.size);
+            anexoData.append('ordem', anexos.length);
+
+            await api.post(`/episodios/${selectedEpisode.id}/anexos`, anexoData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            fetchAnexos(selectedEpisode.id);
+            setAnexoForm({ nome: '', tipo: 'pdf', file: null });
+
+        } catch (error) {
+            console.error('Erro no upload:', error);
+            alert('Falha ao enviar anexo (Verifique tamanho ou tipo).');
+        } finally {
+            setUploadingAnexo(false);
+        }
+    };
+
+    const handleDeleteAnexo = async (anexoId) => {
+        if (!confirm('Excluir este anexo?')) return;
+        try {
+            await api.delete(`/episodios/${selectedEpisode.id}/anexos/${anexoId}`);
+            fetchAnexos(selectedEpisode.id);
+        } catch (error) {
+            alert('Erro ao excluir anexo');
+        }
+    };
+
     const openCreateModal = () => {
         setFormData({
             titulo: '',
@@ -1765,9 +1903,13 @@ function EpisodiosTab({ temporadas, onCreate, onUpdate, onDelete }) {
             status: 'rascunho',
             video_url: '',
             audio_url: '',
-            transcricao: ''
+            transcricao: '',
+            conteudo_texto: '',
+            data_lancamento: '',
+            visivel: true
         });
         setSelectedEpisode(null);
+        setAnexos([]);
         setShowModal(true);
     };
 
@@ -1779,9 +1921,15 @@ function EpisodiosTab({ temporadas, onCreate, onUpdate, onDelete }) {
             ordem: ep.ordem,
             status: ep.status,
             video_url: ep.video_url || '',
-            transcricao: ep.transcricao || ''
+            audio_url: ep.audio_url || '',
+            transcricao: ep.transcricao || '',
+            conteudo_texto: ep.conteudo_texto || '',
+            data_lancamento: ep.data_lancamento ? ep.data_lancamento.split('T')[0] : '', // Adjust for datetime-local if needed, here simplified
+            visivel: ep.visivel !== undefined ? ep.visivel : true
         });
+        setAnexoForm({ nome: '', tipo: 'pdf', file: null });
         setShowModal(true);
+        fetchAnexos(ep.id);
     };
 
     const handleSubmit = async (e) => {
@@ -1982,23 +2130,58 @@ function EpisodiosTab({ temporadas, onCreate, onUpdate, onDelete }) {
                             </div>
 
                             <div>
-                                <label className="block text-sm text-slate-400 mb-2">Status</label>
-                                <div className="flex bg-slate-800 p-1 rounded-xl w-fit">
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, status: 'rascunho' })}
-                                        className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'rascunho' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                                    >
-                                        Rascunho
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setFormData({ ...formData, status: 'publicado' })}
-                                        className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'publicado' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
-                                    >
-                                        Publicado
-                                    </button>
+                                <label className="block text-sm text-slate-400 mb-2">Conteúdo Rico (Texto/Artigo)</label>
+                                <textarea
+                                    value={formData.conteudo_texto}
+                                    onChange={(e) => setFormData({ ...formData, conteudo_texto: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none resize-none font-mono text-sm"
+                                    rows={5}
+                                    placeholder="Conteúdo em texto, markdown ou HTML básico..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Status & Visibilidade</label>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="flex bg-slate-800 p-1 rounded-xl">
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, status: 'rascunho' })}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'rascunho' ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                        >
+                                            Rascunho
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData({ ...formData, status: 'publicado' })}
+                                            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${formData.status === 'publicado' ? 'bg-green-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                                        >
+                                            Publicado
+                                        </button>
+                                    </div>
+
+                                    <div className="flex items-center gap-3 bg-slate-800 px-4 rounded-xl">
+                                        <input
+                                            type="checkbox"
+                                            checked={formData.visivel}
+                                            onChange={(e) => setFormData({ ...formData, visivel: e.target.checked })}
+                                            className="w-5 h-5 rounded border-slate-700 text-aec-pink focus:ring-aec-pink bg-slate-800"
+                                            id="ep-visivel"
+                                        />
+                                        <label htmlFor="ep-visivel" className="text-white text-sm cursor-pointer select-none">Visível na lista?</label>
+                                    </div>
                                 </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm text-slate-400 mb-2">Data Lançamento (Opcional)</label>
+                                <input
+                                    type="datetime-local"
+                                    value={formData.data_lancamento}
+                                    onChange={(e) => setFormData({ ...formData, data_lancamento: e.target.value })}
+                                    className="w-full px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white focus:border-aec-pink focus:outline-none"
+                                />
+                                <p className="text-xs text-slate-500 mt-1">Se preenchido, o conteúdo só será liberado após essa data.</p>
                             </div>
 
                             <div className="flex gap-3 pt-4 border-t border-slate-800 mt-2">
@@ -2017,6 +2200,81 @@ function EpisodiosTab({ temporadas, onCreate, onUpdate, onDelete }) {
                                 </button>
                             </div>
                         </form>
+
+                        {/* SECTION ANEXOS (ONLY EDIT MODE) */}
+                        {selectedEpisode && (
+                            <div className="mt-8 pt-8 border-t border-slate-800">
+                                <h4 className="text-lg font-bold text-white mb-4">Anexos e Materiais</h4>
+
+                                <div className="bg-slate-800/50 p-4 rounded-xl mb-6">
+                                    <h5 className="text-sm font-semibold text-slate-300 mb-3">Adicionar Novo</h5>
+                                    <div className="flex flex-wrap gap-2 items-center">
+                                        <select
+                                            value={anexoForm.tipo}
+                                            onChange={(e) => setAnexoForm({ ...anexoForm, tipo: e.target.value })}
+                                            className="bg-slate-900 border border-slate-700 text-white px-3 py-2 rounded-lg text-sm focus:border-aec-pink"
+                                        >
+                                            <option value="pdf">PDF</option>
+                                            <option value="imagem">Imagem</option>
+                                            <option value="documento">Documento</option>
+                                            <option value="audio_extra">Áudio Extra</option>
+                                        </select>
+
+                                        <input
+                                            type="text"
+                                            placeholder="Nome (Opcional)"
+                                            value={anexoForm.nome}
+                                            onChange={(e) => setAnexoForm({ ...anexoForm, nome: e.target.value })}
+                                            className="bg-slate-900 border border-slate-700 text-white px-3 py-2 rounded-lg text-sm focus:border-aec-pink flex-1"
+                                        />
+
+                                        <input
+                                            type="file"
+                                            onChange={(e) => setAnexoForm({ ...anexoForm, file: e.target.files[0] })}
+                                            className="text-sm text-slate-400 file:mr-2 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-white hover:file:bg-slate-600"
+                                        />
+
+                                        <button
+                                            onClick={handleUploadAnexo}
+                                            disabled={uploadingAnexo || !anexoForm.file}
+                                            className={`px-4 py-2 rounded-lg text-sm font-medium text-white ${uploadingAnexo || !anexoForm.file ? 'bg-slate-700 cursor-not-allowed' : 'bg-aec-pink hover:bg-aec-pinkDark'}`}
+                                        >
+                                            {uploadingAnexo ? 'Enviando...' : 'Upload'}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {loadingAnexos ? (
+                                    <div className="text-center text-slate-500 py-4">Carregando anexos...</div>
+                                ) : anexos.length === 0 ? (
+                                    <p className="text-slate-500 text-sm text-center">Nenhum anexo disponível.</p>
+                                ) : (
+                                    <ul className="space-y-2">
+                                        {anexos.map(anexo => (
+                                            <li key={anexo.id} className="flex justify-between items-center bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xl">
+                                                        {anexo.tipo === 'pdf' ? '📕' : anexo.tipo === 'imagem' ? '🖼️' : anexo.tipo === 'audio_extra' ? '🎧' : '📄'}
+                                                    </span>
+                                                    <div>
+                                                        <div className="text-white text-sm font-medium">{anexo.nome_arquivo}</div>
+                                                        <div className="text-slate-500 text-xs uppercase">{anexo.tipo} • {anexo.tamanho_bytes ? Math.round(anexo.tamanho_bytes / 1024) + ' KB' : '-'}</div>
+                                                    </div>
+                                                    <a href={anexo.url} target="_blank" rel="noopener noreferrer" className="text-xs text-aec-pink hover:underline">Download</a>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleDeleteAnexo(anexo.id)}
+                                                    className="text-slate-500 hover:text-red-400 p-2"
+                                                    title="Remover"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -3764,6 +4022,369 @@ function LogsTab() {
                 <div className="bg-slate-900/85 border border-slate-800 rounded-xl p-4 text-center">
                     <div className="text-2xl font-bold text-blue-400">{logsErros.filter(e => e.resolvido).length}</div>
                     <div className="text-xs text-slate-400">Erros Resolvidos</div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// --- EPISÓDIOS TAB ---
+function EpisodiosTab({ temporadas, onCreate, onUpdate, onDelete }) {
+    const [selectedSeasonId, setSelectedSeasonId] = React.useState(temporadas[0]?.id || '');
+    const [episodios, setEpisodios] = React.useState([]);
+    const [loading, setLoading] = React.useState(false);
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const [editingEpisode, setEditingEpisode] = React.useState(null);
+
+    // Carregar episódios quando mudar a temporada
+    React.useEffect(() => {
+        if (selectedSeasonId) {
+            fetchEpisodios(selectedSeasonId);
+        }
+    }, [selectedSeasonId]);
+
+    const fetchEpisodios = async (seasonId) => {
+        setLoading(true);
+        try {
+            const response = await api.get('/episodios', { params: { temporada_id: seasonId } });
+            setEpisodios(response.data);
+        } catch (error) {
+            console.error('Erro ao buscar episódios:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleEdit = (episodio) => {
+        setEditingEpisode(episodio);
+        setIsModalOpen(true);
+    };
+
+    const handleNew = () => {
+        setEditingEpisode(null);
+        setIsModalOpen(true);
+    };
+
+    const handleSave = async (formData) => {
+        try {
+            if (editingEpisode) {
+                await onUpdate(editingEpisode.id, { ...formData, temporada_id: selectedSeasonId });
+            } else {
+                await onCreate({ ...formData, temporada_id: selectedSeasonId });
+            }
+            setIsModalOpen(false);
+            fetchEpisodios(selectedSeasonId);
+        } catch (error) {
+            console.error('Erro ao salvar:', error);
+            alert('Erro ao salvar episódio');
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if (confirm('Tem certeza que deseja excluir este episódio?')) {
+            await onDelete(id);
+            fetchEpisodios(selectedSeasonId);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h2 className="text-2xl font-bold text-white">Gerenciar Episódios</h2>
+                    <p className="text-slate-400">Adicione conteúdo, mídias e materiais complementares</p>
+                </div>
+                <button
+                    onClick={handleNew}
+                    className="px-4 py-2 bg-aec-pink text-white rounded-xl font-bold hover:opacity-90 transition-opacity flex items-center gap-2"
+                >
+                    <span>+</span> Novo Episódio
+                </button>
+            </div>
+
+            <div className="flex items-center gap-4 bg-slate-900/50 p-4 rounded-2xl border border-slate-800">
+                <span className="text-slate-400 font-medium">Temporada:</span>
+                <select
+                    value={selectedSeasonId}
+                    onChange={(e) => setSelectedSeasonId(e.target.value)}
+                    className="bg-slate-800 text-white border border-slate-700 rounded-lg px-4 py-2 outline-none focus:border-aec-pink"
+                >
+                    {temporadas.map(t => (
+                        <option key={t.id} value={t.id}>{t.ordem} - {t.nome}</option>
+                    ))}
+                </select>
+            </div>
+
+            {loading ? (
+                <div className="text-center py-20 text-slate-500">Carregando episódios...</div>
+            ) : episodios.length === 0 ? (
+                <div className="text-center py-20 bg-slate-900/50 rounded-2xl border border-slate-800 border-dashed">
+                    <p className="text-slate-400 mb-4">Nenhum episódio nesta temporada</p>
+                    <button onClick={handleNew} className="text-aec-pink font-bold hover:underline">
+                        Criar o primeiro
+                    </button>
+                </div>
+            ) : (
+                <div className="grid gap-4">
+                    {episodios.map(ep => (
+                        <div key={ep.id} className="bg-slate-900/85 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center gap-6 group hover:border-slate-700 transition-all">
+                            <div className="w-full md:w-32 h-20 bg-slate-800 rounded-lg overflow-hidden flex-shrink-0 relative">
+                                {ep.thumbnail_url ? (
+                                    <img src={ep.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-600">
+                                        🎬
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-3 mb-1">
+                                    <span className="text-xs font-bold text-aec-pink px-2 py-0.5 bg-aec-pink/10 rounded">
+                                        EP {ep.ordem}
+                                    </span>
+                                    <h3 className="text-lg font-bold text-white truncate">{ep.titulo}</h3>
+                                    {ep.visivel ? (
+                                        <span className="text-[10px] bg-green-500/20 text-green-400 px-1.5 rounded border border-green-500/30">Visível</span>
+                                    ) : (
+                                        <span className="text-[10px] bg-slate-700 text-slate-400 px-1.5 rounded">Oculto</span>
+                                    )}
+                                </div>
+                                <p className="text-slate-400 text-sm line-clamp-2">{ep.descricao}</p>
+                                <div className="flex items-center gap-4 mt-3 text-xs text-slate-500">
+                                    <span title="Data de Lançamento">📅 {ep.data_lancamento ? new Date(ep.data_lancamento).toLocaleDateString() : 'Imediato'}</span>
+                                    <span>📄 {ep.conteudo_texto ? 'Com Texto' : 'Sem Texto'}</span>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 self-end md:self-center">
+                                <button
+                                    onClick={() => handleEdit(ep)}
+                                    className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                                    title="Editar"
+                                >
+                                    ✏️
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(ep.id)}
+                                    className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                    title="Excluir"
+                                >
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {isModalOpen && (
+                <EpisodeModal
+                    episode={editingEpisode}
+                    onClose={() => setIsModalOpen(false)}
+                    onSave={handleSave}
+                />
+            )}
+        </div>
+    );
+}
+
+function EpisodeModal({ episode, onClose, onSave }) {
+    const [formData, setFormData] = React.useState({
+        titulo: '',
+        descricao: '',
+        ordem: 1,
+        conteudo_texto: '',
+        data_lancamento: '',
+        visivel: true,
+        video_url: '',
+        audio_url: '',
+    });
+    const [activeTab, setActiveTab] = React.useState('geral');
+
+    React.useEffect(() => {
+        if (episode) {
+            setFormData({
+                titulo: episode.titulo || '',
+                descricao: episode.descricao || '',
+                ordem: episode.ordem || 1,
+                conteudo_texto: episode.conteudo_texto || '',
+                data_lancamento: episode.data_lancamento ? episode.data_lancamento.split('T')[0] : '',
+                visivel: episode.visivel !== false,
+                video_url: episode.video_url || '',
+                audio_url: episode.audio_url || '',
+            });
+        }
+    }, [episode]);
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData(prev => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value
+        }));
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onSave(formData);
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+                <div className="flex items-center justify-between p-6 border-b border-slate-800">
+                    <h3 className="text-xl font-bold text-white">
+                        {episode ? 'Editar Episódio' : 'Novo Episódio'}
+                    </h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-white">✕</button>
+                </div>
+
+                <div className="flex bg-slate-950/50 border-b border-slate-800 px-6">
+                    <button
+                        onClick={() => setActiveTab('geral')}
+                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'geral' ? 'border-aec-pink text-aec-pink' : 'border-transparent text-slate-400 hover:text-white'}`}
+                    >
+                        Geral
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('conteudo')}
+                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'conteudo' ? 'border-aec-pink text-aec-pink' : 'border-transparent text-slate-400 hover:text-white'}`}
+                    >
+                        Conteúdo & Texto
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('midia')}
+                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'midia' ? 'border-aec-pink text-aec-pink' : 'border-transparent text-slate-400 hover:text-white'}`}
+                    >
+                        Mídia
+                    </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto flex-1">
+                    <form id="episode-form" onSubmit={handleSubmit} className="space-y-6">
+                        {activeTab === 'geral' && (
+                            <div className="space-y-4">
+                                <div className="grid grid-cols-4 gap-4">
+                                    <div className="col-span-3">
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Título</label>
+                                        <input
+                                            type="text"
+                                            name="titulo"
+                                            value={formData.titulo}
+                                            onChange={handleChange}
+                                            required
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-aec-pink outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Ordem</label>
+                                        <input
+                                            type="number"
+                                            name="ordem"
+                                            value={formData.ordem}
+                                            onChange={handleChange}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-aec-pink outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">Descrição Curta</label>
+                                    <textarea
+                                        name="descricao"
+                                        value={formData.descricao}
+                                        onChange={handleChange}
+                                        rows={3}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-aec-pink outline-none resize-none"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-800">
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1">Lançamento (Data Futura)</label>
+                                        <input
+                                            type="date"
+                                            name="data_lancamento"
+                                            value={formData.data_lancamento}
+                                            onChange={handleChange}
+                                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-aec-pink outline-none"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center gap-3 pt-6">
+                                        <input
+                                            type="checkbox"
+                                            id="visivel"
+                                            name="visivel"
+                                            checked={formData.visivel}
+                                            onChange={handleChange}
+                                            className="w-5 h-5 rounded border-slate-600 bg-slate-700 text-aec-pink focus:ring-aec-pink"
+                                        />
+                                        <label htmlFor="visivel" className="text-white font-medium cursor-pointer">Visível para alunos?</label>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'conteudo' && (
+                            <div className="space-y-4 h-full">
+                                <label className="block text-sm font-medium text-slate-400 mb-1">Conteúdo em Texto</label>
+                                <textarea
+                                    name="conteudo_texto"
+                                    value={formData.conteudo_texto}
+                                    onChange={handleChange}
+                                    className="w-full h-80 bg-slate-800 border border-slate-700 rounded-xl px-4 py-4 text-white focus:border-aec-pink outline-none font-mono text-sm leading-relaxed"
+                                    placeholder="Conteúdo do artigo..."
+                                />
+                            </div>
+                        )}
+
+                        {activeTab === 'midia' && (
+                            <div className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">URL do Áudio</label>
+                                    <input
+                                        type="url"
+                                        name="audio_url"
+                                        value={formData.audio_url}
+                                        onChange={handleChange}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-aec-pink outline-none"
+                                        placeholder="https://..."
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-400 mb-1">URL do Vídeo</label>
+                                    <input
+                                        type="url"
+                                        name="video_url"
+                                        value={formData.video_url}
+                                        onChange={handleChange}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-2 text-white focus:border-aec-pink outline-none"
+                                        placeholder="https://..."
+                                    />
+                                </div>
+                            </div>
+                        )}
+                    </form>
+                </div>
+
+                <div className="p-6 border-t border-slate-800 flex justify-end gap-3 bg-slate-900">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-6 py-2 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700 transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="submit"
+                        form="episode-form"
+                        className="px-6 py-2 bg-aec-pink text-white rounded-xl font-bold hover:opacity-90 transition-opacity"
+                    >
+                        Salvar Episódio
+                    </button>
                 </div>
             </div>
         </div>

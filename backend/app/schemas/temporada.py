@@ -14,6 +14,8 @@ class TemporadaCreate(BaseModel):
     ordem: int = Field(..., ge=0)
     mantra: Optional[str] = None
     status: str = "rascunho"
+    data_lancamento: Optional[datetime] = None
+    visivel: bool = True
 
 class TemporadaUpdate(BaseModel):
     """Schema para atualizar temporada"""
@@ -23,6 +25,8 @@ class TemporadaUpdate(BaseModel):
     mantra: Optional[str] = None
     status: Optional[str] = None
     capa_url: Optional[str] = None
+    data_lancamento: Optional[datetime] = None
+    visivel: Optional[bool] = None
 
 class TemporadaOut(BaseModel):
     """Schema de saída de temporada"""
@@ -33,6 +37,8 @@ class TemporadaOut(BaseModel):
     mantra: Optional[str] = None
     capa_url: Optional[str] = None
     status: str
+    data_lancamento: Optional[datetime] = None
+    visivel: bool = True
     created_at: datetime
     updated_at: datetime
     
@@ -50,6 +56,9 @@ class EpisodioCreate(BaseModel):
     video_url: Optional[str] = None
     audio_url: Optional[str] = None
     transcricao: Optional[str] = None
+    conteudo_texto: Optional[str] = None
+    data_lancamento: Optional[datetime] = None
+    visivel: bool = True
 
 class EpisodioUpdate(BaseModel):
     """Schema para atualizar episódio"""
@@ -61,6 +70,9 @@ class EpisodioUpdate(BaseModel):
     temporada_id: Optional[UUID] = None  # Para mover de temporada
     video_url: Optional[str] = None
     audio_url: Optional[str] = None
+    conteudo_texto: Optional[str] = None
+    data_lancamento: Optional[datetime] = None
+    visivel: Optional[bool] = None
 
 class EpisodioOut(BaseModel):
     """Schema de saída de episódio"""
@@ -74,7 +86,10 @@ class EpisodioOut(BaseModel):
     video_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
     transcricao: Optional[str] = None
+    conteudo_texto: Optional[str] = None
     status: str
+    data_lancamento: Optional[datetime] = None
+    visivel: bool = True
     created_at: datetime
     updated_at: datetime
     

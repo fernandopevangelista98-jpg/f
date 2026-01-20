@@ -18,6 +18,8 @@ from app.utils.jwt import get_current_user, get_current_admin
 
 router = APIRouter()
 
+from sqlalchemy import or_, and_, func
+
 @router.get("", response_model=List[TemporadaOut])
 async def list_temporadas(
     status_filter: Optional[str] = Query(None, alias="status"),
@@ -31,9 +33,16 @@ async def list_temporadas(
     """
     query = db.query(Temporada)
     
-    # Usuário comum só vê publicadas
+    # Usuário comum só vê publicadas, visíveis e liberadas
     if current_user.perfil != "admin":
-        query = query.filter(Temporada.status == "publicado")
+        query = query.filter(
+            Temporada.status == "publicado",
+            Temporada.visivel == True,
+            or_(
+                Temporada.data_lancamento == None,
+                Temporada.data_lancamento <= func.now()
+            )
+        )
     elif status_filter:
         query = query.filter(Temporada.status == status_filter)
     
@@ -94,7 +103,9 @@ async def create_temporada(
         descricao=temporada_data.descricao,
         ordem=temporada_data.ordem,
         mantra=temporada_data.mantra,
-        status=temporada_data.status
+        status=temporada_data.status,
+        data_lancamento=temporada_data.data_lancamento,
+        visivel=temporada_data.visivel,
     )
     
     db.add(temporada)

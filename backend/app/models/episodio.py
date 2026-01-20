@@ -1,7 +1,7 @@
 """
 Model de Episódio
 """
-from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey
+from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey, Boolean
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -23,6 +23,9 @@ class Episodio(Base):
     thumbnail_url = Column(Text)
     transcricao = Column(Text)
     status = Column(String(20), default="rascunho")  # 'rascunho', 'publicado', 'arquivado'
+    data_lancamento = Column(DateTime(timezone=True))  # Data/hora de lançamento agendado
+    conteudo_texto = Column(Text)  # Texto completo/rico do episódio
+    visivel = Column(Boolean, default=True)  # Controle de visibilidade
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
@@ -30,6 +33,7 @@ class Episodio(Base):
     # Relacionamentos
     temporada = relationship("Temporada", back_populates="episodios")
     progresso_usuarios = relationship("UsuarioEpisodio", back_populates="episodio", cascade="all, delete-orphan")
+    anexos = relationship("AnexoEpisodio", back_populates="episodio", cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Episodio {self.titulo}>"

@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Importar rotas
-from app.routes import auth, users, temporadas, episodios, provas, progresso, storage, dashboard
+from app.routes import auth, users, temporadas, episodios, provas, progresso, storage, dashboard, anexos
 
 # Importar configuração do banco
 from app.database.connection import engine, Base
@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Podcast Educativo API",
     description="API para a plataforma de podcast educativo Original AeC",
-    version="1.0.0",
+    version="2.0.0",
     lifespan=lifespan
 )
 
@@ -43,6 +43,7 @@ origins = [
     "http://localhost:5173",      # Vite dev server
     "http://localhost:3000",      # React dev server
     os.getenv("FRONTEND_URL", "http://localhost:5173"),
+    "https://f-bay-eight.vercel.app",  # Produção Vercel
 ]
 
 app.add_middleware(
@@ -62,6 +63,7 @@ app.include_router(provas.router, prefix="/provas", tags=["Provas"])
 app.include_router(progresso.router, prefix="/usuario", tags=["Progresso"])
 app.include_router(storage.router, prefix="/storage", tags=["Storage"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard Admin"])
+app.include_router(anexos.router, prefix="/episodios", tags=["Anexos"])
 
 @app.get("/", tags=["Health"])
 async def root():

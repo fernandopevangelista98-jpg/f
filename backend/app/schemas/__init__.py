@@ -15,3 +15,4 @@ from .prova import (
     ResponderProva, ResultadoOut, ResultadoDetalhado
 )
 from .progresso import ProgressoUpdate, ProgressoEpisodio, ProgressoTemporada, ProgressoGeral
+from .anexo import AnexoCreate, AnexoOut, AnexoList
